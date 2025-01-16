@@ -6,12 +6,16 @@ import (
 )
 
 type Logger interface {
-	Error(ctx context.Context, args ...interface{})
-	Warning(ctx context.Context, args ...interface{})
-	WithField(ctx context.Context, k string, v interface{}) *LoggerEntry
-	WithFields(ctx context.Context, fields map[string]interface{}) *LoggerEntry
-	WithError(ctx context.Context, err error) *LoggerEntry
-	WithRequest(ctx context.Context, request *http.Request) *LoggerEntry
-	Info(ctx context.Context, args ...interface{})
-	Debug(ctx context.Context, args ...interface{})
+	Error(args ...interface{})
+	Warn(args ...interface{})
+	Info(args ...interface{})
+	Debug(args ...interface{})
+	Debugf(s string, args ...interface{})
+	Fatal(args ...interface{})
+
+	WithField(k string, v interface{}) Entry
+	WithFields(fields map[string]interface{}) Entry
+	WithError(err error) Entry
+	WithRequest(request *http.Request) Entry
+	WithContext(ctx context.Context) Entry
 }

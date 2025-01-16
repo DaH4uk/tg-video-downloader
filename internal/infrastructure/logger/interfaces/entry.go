@@ -5,32 +5,18 @@ import (
 	"net/http"
 )
 
-type LoggerEntry struct {
-	Fields map[string]interface{}
+type EntryObject struct {
+	Context context.Context
 }
 
-func (e *LoggerEntry) WithField(ctx context.Context, k string, v interface{}) *LoggerEntry {
-	e.Fields["ctx"] = ctx
-	e.Fields[k] = v
-	return e
-}
-
-func (e *LoggerEntry) WithFields(ctx context.Context, fields map[string]interface{}) *LoggerEntry {
-	e.Fields["ctx"] = ctx
-	for k, v := range fields {
-		e.Fields[k] = v
-	}
-	return e
-}
-
-func (e *LoggerEntry) WithError(ctx context.Context, err error) *LoggerEntry {
-	e.Fields["ctx"] = ctx
-	e.Fields["err"] = err
-	return e
-}
-
-func (e *LoggerEntry) WithRequest(ctx context.Context, request *http.Request) *LoggerEntry {
-	e.Fields["ctx"] = ctx
-	e.Fields["req"] = request
-	return e
+type Entry interface {
+	WithField(k string, v interface{}) Entry
+	WithFields(fields map[string]interface{}) Entry
+	WithError(err error) Entry
+	WithRequest(request *http.Request) Entry
+	Info(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+	Debug(args ...interface{})
+	Debugf(s string, args ...interface{})
 }
