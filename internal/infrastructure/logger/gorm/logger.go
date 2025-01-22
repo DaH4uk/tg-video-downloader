@@ -45,13 +45,13 @@ func (l *Logger) Info(ctx context.Context, s string, args ...interface{}) {
 func (l *Logger) Warn(ctx context.Context, s string, args ...interface{}) {
 	l.log.
 		WithContext(ctx).
-		Warn(fmt.Sprintf(s, args))
+		Warn(fmt.Sprintf(s, args...))
 }
 
 func (l *Logger) Error(ctx context.Context, s string, args ...interface{}) {
 	l.log.
 		WithContext(ctx).
-		Error(fmt.Sprintf(s, args))
+		Error(fmt.Sprintf(s, args...))
 }
 
 func (l *Logger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
