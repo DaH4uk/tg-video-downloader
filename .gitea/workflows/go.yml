@@ -14,24 +14,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: https://github.com/actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: https://github.com/actions/setup-go@v5
       with:
-        go-version: '1.23.x'
-        cache-dependency-path: ./go.sum
+        go-version: '1.23.4'
 
     - name: Install dependencies
       run: go mod download
 
-    - name: Test
-      run: CGO_ENABLED=0 GOOS=linux go test -v ./...
-
     - name: Build service
       run: go build -o ./bin/service ./cmd/service
 
-    - name: Build docker image
-      run: docker build --tag telegram-vpn-bot .
+      - name: Test
+        run: go test -cover -v ./...
+
 
 
