@@ -23,10 +23,15 @@ jobs:
         cache-dependency-path: ./go.sum
 
     - name: Install dependencies
-      run: go get -d ./...
-
-    - name: Build
-      run: go build -v ./...
+      run: go mod download
 
     - name: Test
-      run: go test -v ./...
+      run: CGO_ENABLED=0 GOOS=linux go test -v ./...
+
+    - name: Build service
+      run: go build -o ./bin/service ./cmd/service
+
+    - name: Build docker image
+      run: docker build --tag telegram-vpn-bot .
+
+
