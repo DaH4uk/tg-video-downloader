@@ -1,21 +1,36 @@
 FROM golang:1.23.4-alpine as build
 
+# Убедимся, что Go установлен
 RUN go version
-RUN apk add git
 
+# Устанавливаем git (необходим для go mod download)
+RUN apk add --no-cache git
+
+# Копируем исходный код в контейнер
 COPY . /app
 WORKDIR /app
 
+# Скачиваем зависимости
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./.bin/service ./cmd/service
+
+# Собираем бинарный файл
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/service ./cmd/service
 
 
 # Используем минимальный базовый образ
 FROM alpine:latest
 
+# Устанавливаем необходимые пакеты
 RUN apk --no-cache add ca-certificates
+
+# Копируем бинарный файл из стадии сборки
+COPY --from=build /app/service /usr/local/bin/service
+
+# Устанавливаем рабочую директорию
 WORKDIR /root/
 
-COPY --from=0 /app/.bin/service .
+# Даем права на выполнение
+RUN chmod +x /usr/local/bin/service
 
-CMD ["./service"]
+# Запускаем сервис
+CMD ["service"]
