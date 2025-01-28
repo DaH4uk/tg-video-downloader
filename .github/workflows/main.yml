@@ -117,10 +117,10 @@ jobs:
           docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
           
           echo "Stopping container..."
-          docker stop ${{ env.CONTAINER_NAME }}
+          docker stop ${{ env.CONTAINER_NAME }} || true
           
           echo "Removing container..."
-          docker rm ${{ env.CONTAINER_NAME }}
+          docker rm ${{ env.CONTAINER_NAME }} || true
           
           echo "Running container with version ${{ needs.build_docker.outputs.version }}..."
           docker run -d --name telegram-vpn-bot \
