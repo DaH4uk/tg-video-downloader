@@ -24,13 +24,13 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 
 # Копируем бинарный файл из стадии сборки
-COPY --from=build /app/service /usr/local/bin/service
+COPY --from=build /app/service /root/service
 
 # Устанавливаем рабочую директорию
-WORKDIR /root/
+WORKDIR /root
 
 # Даем права на выполнение
-RUN chmod +x /usr/local/bin/service
+RUN chmod +x /root/service
 
 # Запускаем сервис
-CMD ["service"]
+CMD ["/root/service"]
