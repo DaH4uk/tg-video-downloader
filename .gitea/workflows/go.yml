@@ -40,7 +40,7 @@ jobs:
         with:
           registry: gitea.walsy.synology.me
           username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
         run: |
