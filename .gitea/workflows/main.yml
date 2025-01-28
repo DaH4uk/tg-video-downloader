@@ -47,6 +47,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create .env
+        run: |
+          # Создаем или перезаписываем .env
+          echo "# Auto-generated .env file" > .env
+          
+          for var in $(printenv); do
+            key=$(echo "$var" | cut -d= -f1)
+            value=$(echo "$var" | cut -d= -f2-)
+            echo "${key}=${value}" >> .env
+          done
+          
+          # Добавляем переменные из secrets
+          echo "Adding secrets..."
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env
+          
+          cat .env
+
+
       - name: Build Docker image
         run: |
           docker build --file ./Dockerfile \
