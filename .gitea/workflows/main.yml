@@ -22,6 +22,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Print vars
+        run: |
+          echo "VARS: ${{ vars }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -68,7 +72,7 @@ jobs:
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
         with:
-          registry: ${{ REGISTRY }}
+          registry: ${{ env.REGISTRY }}
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
