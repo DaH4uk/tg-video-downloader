@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     needs: test
+    outputs:
+      version: ${{ steps.next_version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -45,15 +47,20 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: calculate version
-        id: calculate-version
-        uses: bitshifted/git-auto-semver@v1
+      - id: bump
+        uses: zwaldowski/match-label-action@v4
         with:
-          create_tag: true
+          allowed: major,minor,patch
+          default_match: patch
 
-      - name: Use version
-        run: |
-          echo "Calculated version: ${{ steps.calculate-version.outputs.version-string }}"
+      - id: next_version
+        uses: zwaldowski/semver-release-action@v3
+        with:
+          bump: ${{ steps.bump.outputs.match }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get next version
+        run: echo "${{ steps.next_version.outputs.version }}"
 
       - name: Create .env
         run: |
@@ -77,8 +84,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build --file ./Dockerfile \
-                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }} \
-                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest .
+                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }} .
 
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
@@ -90,7 +96,6 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
-          docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -107,8 +112,8 @@ jobs:
 
       - name: Deploy container
         run: |
-          echo "Pulling latest container..."
-          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+          echo "Pulling container with version ${{ needs.build_docker.outputs.version }}..."
+          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
           
           echo "Stopping container..."
           docker stop ${{ env.CONTAINER_NAME }}
@@ -116,6 +121,6 @@ jobs:
           echo "Removing container..."
           docker rm ${{ env.CONTAINER_NAME }}
           
-          echo "Running latest container..."
+          echo "Running container with version ${{ needs.build_docker.outputs.version }}..."
           docker run -d --name telegram-vpn-bot \
-            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
