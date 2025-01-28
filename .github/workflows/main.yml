@@ -97,8 +97,8 @@ jobs:
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
           
           # Остановить старый контейнер (если существует)
-          docker stop ${{ CONTAINER_NAME }}
-          docker rm ${{ CONTAINER_NAME }}
+          docker stop ${{ env.CONTAINER_NAME }}
+          docker rm ${{ env.CONTAINER_NAME }}
           
           # Запустить новый контейнер с указанной версией
           docker run -d --name telegram-vpn-bot \
