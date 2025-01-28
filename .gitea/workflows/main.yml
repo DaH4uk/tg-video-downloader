@@ -22,9 +22,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Print vars
-        run: |
-          echo "VARS: ${{ vars }}"
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,7 +49,7 @@ jobs:
           # Создаем или перезаписываем .env
           echo "# Auto-generated .env file" > .env
           
-          for var in $(printenv); do
+          for var in ${{ vars }}; do
             key=$(echo "$var" | cut -d= -f1)
             value=$(echo "$var" | cut -d= -f2-)
             echo "${key}=${value}" >> .env
