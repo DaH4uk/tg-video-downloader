@@ -1,6 +1,14 @@
-FROM golang:1.23.4-alpine
+# Используем минимальный базовый образ
+FROM alpine:latest
 
+# Копируем собранный бинарник
+COPY ./bin/service /app/service
+
+# Делаем бинарник исполняемым
+RUN chmod +x /app/service
+
+# Указываем рабочую директорию
 WORKDIR /app
-COPY ./bin /app
 
-CMD ["/app/bin/service"]
+# Команда запуска контейнера
+CMD ["/app/service"]
