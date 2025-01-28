@@ -47,7 +47,7 @@ jobs:
         uses: bitshifted/git-auto-semver@v1
 
       - name: Use version
-        run:
+        run: |
           echo "Calculated version: ${{ steps.calculate-version.outputs.version-string }}"
 
       - name: Create .env
