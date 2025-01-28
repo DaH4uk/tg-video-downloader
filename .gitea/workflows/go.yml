@@ -24,11 +24,30 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Build service
-        run: go build -o ./bin/service ./cmd/service
-
       - name: Test
         run: go test -cover -v ./...
 
+      - name: Build service
+        run: go build -o ./bin/service ./cmd/service
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin
+          path: |
+            ./bin
+
+      - name: Build docker image
+        run: >
+          docker build .
+          --file Dockerfile
+          --build-arg PROJECT_VERSION="$PROJECT_VERSION"
+          --tag gitea.walsy.synology.me/DaH4uk/telegram-vpn-bot:$(date +%s)
+
+      - name: Push docker image
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: gitea.walsy.synology.me/DaH4uk/telegram-vpn-bot:$(date +%s)
 
 
