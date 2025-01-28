@@ -45,6 +45,8 @@ jobs:
       - name: calculate version
         id: calculate-version
         uses: bitshifted/git-auto-semver@v1
+        with:
+          create_tag: true
 
       - name: Use version
         run: |
@@ -102,8 +104,8 @@ jobs:
 
       - name: Deploy container
         run: |
-          echo "Pulling container with version ${{ steps.calculate-version.outputs.version-string}}..."
-          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
+          echo "Pulling latest container..."
+          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
           
           echo "Stopping container..."
           docker stop ${{ env.CONTAINER_NAME }}
@@ -111,6 +113,6 @@ jobs:
           echo "Removing container..."
           docker rm ${{ env.CONTAINER_NAME }}
           
-          echo "Running container with version ${{ steps.calculate-version.outputs.version-string}}..."
+          echo "Running latest container..."
           docker run -d --name telegram-vpn-bot \
-            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
