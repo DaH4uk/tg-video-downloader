@@ -14,8 +14,7 @@ env:
   REGISTRY: gitea.walsy.synology.me
   REGISTRY_USERNAME: dah4uk
   IMAGE_NAME: dah4uk/telegram-vpn-bot
-  VERSION_PREFIX: 'v0.0.'
-  VERSION: ${{ env.VERSION_PREFIX }}${{ github.run_number }}
+  VERSION: 'v0.0.${{ github.run_number }}'
   CONTAINER_NAME: telegram-vpn-bot
 
 jobs:
