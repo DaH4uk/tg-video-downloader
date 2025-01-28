@@ -6,7 +6,7 @@ RUN apk add git
 COPY . /app
 WORKDIR /app
 
-RUN go mod download && go get -u ./...
+RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -o ./.bin/service ./cmd/service
 
 
@@ -16,6 +16,6 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
-COPY --from=0 /bin/app .
+COPY --from=0 /bin/service .
 
 CMD ["./service"]
