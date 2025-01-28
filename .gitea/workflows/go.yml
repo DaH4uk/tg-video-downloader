@@ -52,6 +52,8 @@ jobs:
           # Проверяем, существует ли тег
           if git rev-parse $VERSION >/dev/null 2>&1; then
             echo "Tag $VERSION already exists. Using the existing tag."
+            VERSION=$(echo $TAG | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
+            echo "New version: $VERSION"
           else
             echo "Creating new tag: $VERSION"
             git tag $VERSION
