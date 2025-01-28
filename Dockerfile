@@ -4,7 +4,3 @@ WORKDIR /app
 COPY ./bin /app
 
 CMD ["/app/bin/service"]
-
-
-
-
