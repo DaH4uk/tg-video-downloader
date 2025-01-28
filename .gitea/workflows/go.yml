@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -35,12 +36,12 @@ jobs:
           docker build .
           --file Dockerfile
           --build-arg PROJECT_VERSION="$PROJECT_VERSION"
-          --tag gitea.walsy.synology.me/DaH4uk/telegram-vpn-bot:$(date +%s)
+          --tag gitea.walsy.synology.me/dah4uk/telegram-vpn-bot:$(date +%s)
 
       - name: Push docker image
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: gitea.walsy.synology.me/DaH4uk/telegram-vpn-bot:$(date +%s)
+          tags: gitea.walsy.synology.me/dah4uk/telegram-vpn-bot:$(date +%s)
 
 
