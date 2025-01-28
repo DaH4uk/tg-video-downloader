@@ -42,20 +42,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - id: bump
-        uses: zwaldowski/match-label-action@v4
-        with:
-          allowed: major,minor,patch
-          default_match: patch
+      - name: calculate version
+        id: calculate-version
+        uses: bitshifted/git-auto-semver@v1
 
-      - id: next_version
-        uses: zwaldowski/semver-release-action@v3
-        with:
-          bump: ${{ steps.bump.outputs.match }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get next version
-        run: echo "${{ steps.next_version.outputs.version }}"
+      - name: Use version
+        run:
+          echo "Calculated version: ${{ steps.calculate-version.outputs.version-string }}"
 
       - name: Create .env
         run: |
