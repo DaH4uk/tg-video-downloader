@@ -71,7 +71,9 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --file ./Dockerfile -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} .
+          docker build --file ./Dockerfile \
+                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }} \
+                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest .
 
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
@@ -82,7 +84,8 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
+          docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -99,12 +102,15 @@ jobs:
 
       - name: Deploy container
         run: |
-          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          echo "Pulling container with version ${{ steps.calculate-version.outputs.version-string}}..."
+          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
           
-          # Остановить старый контейнер (если существует)
+          echo "Stopping container..."
           docker stop ${{ env.CONTAINER_NAME }}
+          
+          echo "Removing container..."
           docker rm ${{ env.CONTAINER_NAME }}
           
-          # Запустить новый контейнер с указанной версией
+          echo "Running container with version ${{ steps.calculate-version.outputs.version-string}}..."
           docker run -d --name telegram-vpn-bot \
-            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.calculate-version.outputs.version-string }}
