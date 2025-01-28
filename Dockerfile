@@ -16,6 +16,6 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
-COPY --from=0 /bin/service .
+COPY --from=0 /app/.bin/service .
 
 CMD ["./service"]
