@@ -61,12 +61,6 @@ jobs:
           # Передаем версию в env
           echo "version=$VERSION" >> $GITHUB_ENV
 
-      - name: Tag the release
-        run: |
-          # Создаем новый тег версии
-          git tag ${{ env.version }}
-          git push origin ${{ env.version }}
-
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
         with:
