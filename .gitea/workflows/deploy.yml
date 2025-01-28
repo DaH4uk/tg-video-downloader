@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version of the Docker image to deploy (e.g., v1.0.0)"
+        required: true
+        default: "latest"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: gitea.walsy.synology.me
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull Docker image
+        run: |
+          docker pull gitea.walsy.synology.me/dah4uk/telegram-vpn-bot:${{ github.event.inputs.version }}
+
+      - name: Deploy container
+        run: |
+          # Остановить старый контейнер (если существует)
+          docker stop telegram-vpn-bot || true
+          docker rm telegram-vpn-bot || true
+          
+          # Запустить новый контейнер с указанной версией
+          docker run -d --name telegram-vpn-bot \
+            gitea.walsy.synology.me/dah4uk/telegram-vpn-bot:${{ github.event.inputs.version }}
