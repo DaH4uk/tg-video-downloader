@@ -33,4 +33,4 @@ WORKDIR /root
 RUN chmod +x /root/service
 
 # Запускаем сервис
-CMD ["/root/service"]
+ENTRYPOINT ["/root/service"]
