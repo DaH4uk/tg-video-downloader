@@ -82,11 +82,6 @@ jobs:
           cat .env
 
 
-      - name: Build Docker image
-        run: |
-          docker build --file ./Dockerfile \
-                       -t ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.next_version.outputs.version }} .
-
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
         with:
@@ -94,9 +89,12 @@ jobs:
           username: ${{ vars.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Push Docker image
-        run: |
-          docker push ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.next_version.outputs.version }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.next_version.outputs.version }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -113,6 +111,8 @@ jobs:
 
       - name: Deploy container
         run: |
+          echo "DOCKER_HOST=$DOCKER_HOST"
+          
           echo "Pulling container with version ${{ needs.build_docker.outputs.version }}..."
           docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
           
