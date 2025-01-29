@@ -123,5 +123,4 @@ jobs:
           docker rm ${{ env.CONTAINER_NAME }} || true
           
           echo "Running container with version ${{ needs.build_docker.outputs.version }}..."
-          docker run -d --name telegram-vpn-bot \
-            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
+          docker run --name telegram-vpn-bot ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.build_docker.outputs.version }}
