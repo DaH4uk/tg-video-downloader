@@ -36,10 +36,7 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		return err
 	}
 	defer func(messageSender *messages_sender.Sender, chatID int64, messageID int) {
-		err := messageSender.DeleteMessage(chatID, messageID)
-		if err != nil {
-			h.log.WithError(err).Warn("failed to delete message")
-		}
+		_ = messageSender.DeleteMessage(chatID, messageID)
 	}(h.messageSender, message.Chat.ID, msg.MessageID)
 
 	videoPath, err := h.videoDownloader.DownloadVideo(message.Text)
