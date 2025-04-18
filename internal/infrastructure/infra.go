@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"telegram-vpn-bot/internal/infrastructure/db"
+	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
 
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -12,7 +13,7 @@ type Infra struct {
 	DB *gorm.DB
 }
 
-func Init() (*Infra, error) {
+func Init(log interfaces.Logger) (*Infra, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load .env file")

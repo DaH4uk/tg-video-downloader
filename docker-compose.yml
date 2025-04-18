@@ -19,8 +19,6 @@ services:
       POSTGRES_USER: giteauser
       POSTGRES_PASSWORD: giteapass
       POSTGRES_DB: gitea
-    networks:
-      - gitea
     volumes:
       - ./db:/var/lib/postgresql/data:rw
     ports:

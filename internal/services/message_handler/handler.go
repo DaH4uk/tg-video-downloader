@@ -2,9 +2,11 @@ package message_handler
 
 import (
 	"strings"
+	"sync"
 
 	"telegram-vpn-bot/internal/handlers/callback"
 	"telegram-vpn-bot/internal/handlers/command"
+	"telegram-vpn-bot/internal/handlers/message"
 	"telegram-vpn-bot/internal/infrastructure/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -12,11 +14,13 @@ import (
 )
 
 var log = logger.GetLogger()
+var wg sync.WaitGroup
 
 type TelegramHandler struct {
 	bot              *tgbotapi.BotAPI
 	commandHandlers  map[string]command.CommandHandler
 	callbackHandlers map[string]callback.CallbackHandler
+	messageHandlers  map[string]message.Handler
 }
 
 func New(bot *tgbotapi.BotAPI) *TelegramHandler {
@@ -24,6 +28,7 @@ func New(bot *tgbotapi.BotAPI) *TelegramHandler {
 		bot:              bot,
 		commandHandlers:  map[string]command.CommandHandler{},
 		callbackHandlers: map[string]callback.CallbackHandler{},
+		messageHandlers:  map[string]message.Handler{},
 	}
 }
 
@@ -35,30 +40,42 @@ func (h *TelegramHandler) RegisterCallback(callbackPrefix string, handler callba
 	h.callbackHandlers[strings.ToLower(callbackPrefix)] = handler
 }
 
+func (h *TelegramHandler) RegisterMessageHandler(messagePrefix string, handler message.Handler) {
+	h.messageHandlers[strings.ToLower(messagePrefix)] = handler
+}
+
 func (h *TelegramHandler) HandleUpdates() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := h.bot.GetUpdatesChan(u)
+	log.Info("Handling telegram requests")
 	for update := range updates {
-		message := update.Message
-		if message == nil {
-			h.handleCallback(update)
-			continue
-		}
+		wg.Add(1)
+		go h.handleUpdate(update)
+	}
+	wg.Wait()
+}
 
-		if message.IsCommand() {
-			err := h.handleCommand(message)
-			if err != nil {
-				h.handleCommandError(message, err)
+func (h *TelegramHandler) handleUpdate(update tgbotapi.Update) {
+	defer wg.Done()
+	m := update.Message
+	if m == nil {
+		h.handleCallback(update)
+		return
+	}
 
-			}
-			continue
-		}
-
-		err := h.handleMessage(message)
+	if m.IsCommand() {
+		err := h.handleCommand(m)
 		if err != nil {
-			log.Warn("handle message error: ", err)
+			h.handleCommandError(m, err)
+
 		}
+		return
+	}
+
+	err := h.handleMessage(m)
+	if err != nil {
+		log.Warn("handle m error: ", err)
 	}
 }
 
@@ -113,18 +130,21 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message) error {
 }
 
 func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
-	if message == nil { // If we got a message
+	if message == nil || message.Text == "" {
 		return nil
 	}
+
 	log.Debugf("[%s] %s", message.From.UserName, message.Text)
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, message.Text)
-	msg.ReplyToMessageID = message.MessageID
-
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
+	messageText := strings.ToLower(message.Text)
+	for messagePrefix, handler := range h.messageHandlers {
+		if strings.HasPrefix(messageText, messagePrefix) {
+			return handler.HandleMessage(message)
+		}
 	}
+
+	log.Debugf("Message handler not found for message: %s", message.Text)
+
 	return nil
 }
 
