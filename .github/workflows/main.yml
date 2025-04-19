@@ -49,8 +49,8 @@ jobs:
 
       - name: Build and push with docker-compose
         run: |
-          docker-compose build
-          docker-compose push
+          docker compose build
+          docker compose push
 
       - name: Deploy with docker-compose
         env:
