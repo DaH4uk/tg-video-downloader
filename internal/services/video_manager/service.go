@@ -30,7 +30,6 @@ func New(log interfaces.Logger) VideoManager {
 		PrintJSON().
 		NoProgress().
 		FormatSort("res,ext:mp4:m4a").
-		RecodeVideo("mp4").
 		NoPlaylist().
 		NoOverwrites().
 		Output("%(extractor)s - %(title)s.%(ext)s")
