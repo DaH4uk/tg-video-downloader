@@ -28,7 +28,10 @@ func main() {
 
 	usersRepository := users_repository.NewUsersRepository(infra.DB)
 
-	telegramBotApi, _ := handlers.InitBotApi()
+	telegramBotApi, err := handlers.InitBotApi()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to init telegram bot api"))
+	}
 
 	usersService := users_service.New(usersRepository)
 	notifierService := notifier_service.New(telegramBotApi, usersService)
