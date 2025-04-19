@@ -8,26 +8,12 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  manual:
-    inputs:
-      deploy_type:
-        description: 'Тип деплоя'
-        required: true
-        type: choice
-        options:
-          - prod
-          - stage
-        default: 'prod'
-      version:
-        description: 'Версия для деплоя (оставьте пустым для latest)'
-        required: false
-        type: string
 
 env:
   GO_VERSION: '1.24.2'
   REGISTRY_URL: gitea.walsy.synology.me
   IMAGE_NAME: dah4uk/telegram-vpn-bot
-  VERSION: ${{ github.event.inputs.version || format('v0.0.{0}', github.run_number) }}
+  VERSION: 'v0.0.${{ github.run_number }}'
   CONTAINER_NAME: telegram-vpn-bot
 
 jobs:
@@ -65,38 +51,6 @@ jobs:
         run: |
           docker compose build
           docker compose push
-
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build_docker
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Log in to Docker Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY_URL }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Create .env file
-        run: |
-          cat << EOF > .env
-          REGISTRY_URL=${{ env.REGISTRY_URL }}
-          IMAGE_NAME=${{ env.IMAGE_NAME }}
-          VERSION=${{ env.VERSION }}
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          EOF
 
       - name: Deploy with docker-compose
         env:
