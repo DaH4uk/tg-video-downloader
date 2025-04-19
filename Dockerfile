@@ -1,4 +1,4 @@
-FROM golang:1.23.4-alpine as build
+FROM golang:1.24.2 as build
 
 # Убедимся, что Go установлен
 RUN go version
