@@ -29,7 +29,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
       POSTGRES_DB: ${POSTGRES_DB:?err}
     volumes:
-      - ./db:/var/lib/postgresql/data:rw
+      - /volume1/docker/tg-bot/db:/var/lib/postgresql/data:rw
     ports:
       - "5437:5432"
 
