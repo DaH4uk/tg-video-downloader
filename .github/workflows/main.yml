@@ -17,7 +17,7 @@ env:
   CONTAINER_NAME: telegram-vpn-bot
 
 jobs:
-  build_docker:
+  build_and_deploy:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
@@ -28,24 +28,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Create .env
-        run: |
-          # Создаем или перезаписываем .env
-          echo "# Auto-generated .env file" > .env
-          
-          for var in ${{ vars }}; do
-            key=$(echo "$var" | cut -d= -f1)
-            value=$(echo "$var" | cut -d= -f2-)
-            echo "${key}=${value}" >> .env
-          done
-          
-          # Добавляем переменные из secrets
-          echo "Adding secrets..."
-          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
-          echo "POSTGRES_DSN=${{ secrets.POSTGRES_DSN }}" >> .env
-          cat .env
-
-
       - name: Log in to Docker Registry
         uses: docker/login-action@v2
         with:
@@ -53,39 +35,32 @@ jobs:
           username: ${{ vars.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .  # Используем локальный контекст вместо URL
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: build_docker
-
-    steps:
-      - name: Log in to Docker Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY_URL }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Deploy container
+      - name: Create .env file
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
+          cat << EOF > .env
+          REGISTRY_URL=${{ env.REGISTRY_URL }}
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          VERSION=${{ env.VERSION }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          EOF
+
+      - name: Build and push with docker-compose
+        run: |
+          docker-compose build
+          docker-compose push
+
+      - name: Deploy with docker-compose
+        env:
+          DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
+        run: |
+          echo "Stopping and removing existing containers..."
+          docker-compose down --remove-orphans || true
           
-          echo "Pulling container with version ${{ env.VERSION }}..."
-          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          echo "Pulling latest images..."
+          docker-compose pull
           
-          echo "Stopping container..."
-          docker stop ${{ env.CONTAINER_NAME }} || true
-          
-          echo "Removing container..."
-          docker rm ${{ env.CONTAINER_NAME }} || true
-          
-          echo "Running container with version ${{ env.VERSION }}..."
-          docker run -d --name telegram-vpn-bot ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          echo "Starting services..."
+          docker-compose up -d

@@ -1,26 +1,35 @@
 services:
   server:
+    container_name: tg-bot-server
+    image: ${REGISTRY_URL}/${IMAGE_NAME}:${VERSION}
     build:
       context: .
+    env_file:
+      - .env
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}}
+      POSTGRES_DSN: "host=postgres user=${POSTGRES_USER:?err} password=${POSTGRES_PASSWORD:?err} dbname=${POSTGRES_DB:?err} port=5432 sslmode=disable"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
+    container_name: tg-bot-postgres
     image: postgres:17
     restart: on-failure:5
-    env_file:
-      - ./.env
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "gitea", "-U", "giteauser" ]
+      test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}" ]
       timeout: 45s
       interval: 10s
       retries: 10
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: giteauser
-      POSTGRES_PASSWORD: giteapass
-      POSTGRES_DB: gitea
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:?err}
     volumes:
       - ./db:/var/lib/postgresql/data:rw
     ports:
-      - "5432:5432"
+      - "5437:5432"
 

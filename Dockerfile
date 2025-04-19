@@ -23,6 +23,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/service ./cmd/service
 # Используем минимальный базовый образ
 FROM alpine:latest
 
+# Определяем аргументы запуска
+ARG TELEGRAM_BOT_TOKEN
+ARG POSTGRES_DSN
+
+# Устанавливаем их как переменные окружения
+ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+ENV POSTGRES_DSN=$POSTGRES_DSN
+
 # Устанавливаем необходимые пакеты
 RUN apk --no-cache add ca-certificates
 
