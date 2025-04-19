@@ -58,8 +58,8 @@ jobs:
           
           # Добавляем переменные из secrets
           echo "Adding secrets..."
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-          echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+          echo "POSTGRES_DSN=${{ secrets.POSTGRES_DSN }}" >> .env
           
           cat .env
 
