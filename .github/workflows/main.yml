@@ -57,10 +57,10 @@ jobs:
           DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
         run: |
           echo "Stopping and removing existing containers..."
-          docker-compose down --remove-orphans || true
+          docker compose down --remove-orphans || true
           
           echo "Pulling latest images..."
-          docker-compose pull
+          docker compose pull
           
           echo "Starting services..."
-          docker-compose up -d
+          docker compose up -d
