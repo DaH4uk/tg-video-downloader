@@ -15,6 +15,7 @@ env:
   IMAGE_NAME: dah4uk/telegram-vpn-bot
   VERSION: 'v0.0.${{ github.run_number }}'
   CONTAINER_NAME: telegram-vpn-bot
+  DB_DIR: /volume1/docker/tg-bot/db
 
 jobs:
   build_and_deploy:
@@ -51,6 +52,13 @@ jobs:
         run: |
           docker compose build
           docker compose push
+
+      - name: Prepare deployment
+        env:
+          DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
+        run: |
+          echo "Создаем директорию для данных PostgreSQL"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ DB_DIR }} && chmod 777 ${{ DB_DIR }}"
 
       - name: Deploy with docker-compose
         env:
