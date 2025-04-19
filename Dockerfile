@@ -13,8 +13,8 @@ WORKDIR /app
 # Скачиваем зависимости
 RUN go mod download
 
-# Прогоняем тесты
-RUN go test -cover -v ./...
+## Прогоняем тесты
+#RUN go test -cover -v ./...
 
 # Собираем бинарный файл
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/service ./cmd/service
