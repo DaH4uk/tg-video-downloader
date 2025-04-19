@@ -16,8 +16,6 @@ func InitBotApi() (*tgbotapi.BotAPI, error) {
 
 	if telegramBotToken == "" {
 		return nil, errors.New("TELEGRAM_BOT_TOKEN environment variable not set")
-	} else {
-		log.Info("Telegram bot token:", telegramBotToken)
 	}
 
 	bot, err := tgbotapi.NewBotAPI(telegramBotToken)

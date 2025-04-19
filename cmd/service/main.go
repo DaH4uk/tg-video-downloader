@@ -30,7 +30,7 @@ func main() {
 
 	telegramBotApi, err := handlers.InitBotApi()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "failed to init telegram bot api"))
+		panic(errors.Wrap(err, "failed to init telegram bot api"))
 	}
 
 	usersService := users_service.New(usersRepository)
