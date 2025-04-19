@@ -16,6 +16,8 @@ RUN go mod download
 ## Прогоняем тесты
 #RUN go test -cover -v ./...
 
+RUN ls
+
 # Собираем бинарный файл
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/service ./cmd/service
 
@@ -33,6 +35,9 @@ ENV POSTGRES_DSN=$POSTGRES_DSN
 
 # Устанавливаем необходимые пакеты
 RUN apk --no-cache add ca-certificates
+
+# Копируем .env файл из стадии сборки
+COPY --from=build /app/.env /root/.env
 
 # Копируем бинарный файл из стадии сборки
 COPY --from=build /app/service /root/service
