@@ -17,26 +17,9 @@ env:
   CONTAINER_NAME: telegram-vpn-bot
 
 jobs:
-  #  test:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #
-  #      - name: Checkout code
-  #        uses: actions/checkout@v4
-  #
-  #      - name: Set up Go
-  #        uses: actions/setup-go@v5
-  #        with:
-  #          go-version: ${{ env.GO_VERSION }}
-  #          cache-dependency-path: ./go.sum
-  #
-  #      - name: Test
-  #        run: go test -cover -v ./...
-
   build_docker:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    #    needs: test
 
     steps:
       - name: Checkout code
@@ -60,7 +43,6 @@ jobs:
           echo "Adding secrets..."
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "POSTGRES_DSN=${{ secrets.POSTGRES_DSN }}" >> .env
-          
           cat .env
 
 
@@ -74,6 +56,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
+          context: .  # Используем локальный контекст вместо URL
           file: ./Dockerfile
           push: true
           tags: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
