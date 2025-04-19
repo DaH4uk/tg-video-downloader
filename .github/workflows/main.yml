@@ -8,6 +8,20 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: 'Тип деплоя'
+        required: true
+        type: choice
+        options:
+          - prod
+          - stage
+        default: 'prod'
+      version:
+        description: 'Версия для деплоя (оставьте пустым для latest)'
+        required: false
+        type: string
 
 env:
   GO_VERSION: '1.24.2'
@@ -15,10 +29,9 @@ env:
   IMAGE_NAME: dah4uk/telegram-vpn-bot
   VERSION: 'v0.0.${{ github.run_number }}'
   CONTAINER_NAME: telegram-vpn-bot
-  DB_DIR: /volume1/docker/tg-bot/db
 
 jobs:
-  build_and_deploy:
+  build_docker:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
@@ -53,22 +66,29 @@ jobs:
           docker compose build
           docker compose push
 
-      - name: Prepare deployment
-        env:
-          DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
-        run: |
-          echo "Создаем директорию для данных PostgreSQL"
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ DB_DIR }} && chmod 777 ${{ DB_DIR }}"
 
-      - name: Deploy with docker-compose
-        env:
-          DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
-        run: |
-          echo "Stopping and removing existing containers..."
-          docker compose down --remove-orphans || true
-          
-          echo "Pulling latest images..."
-          docker compose pull
-          
-          echo "Starting services..."
-          docker compose up -d
+    deploy:
+      runs-on: ubuntu-latest
+      needs: build
+      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+      steps:
+        - name: Log in to Docker Registry
+          uses: docker/login-action@v2
+          with:
+            registry: ${{ env.REGISTRY_URL }}
+            username: ${{ vars.REGISTRY_USERNAME }}
+            password: ${{ secrets.REGISTRY_PASSWORD }}
+
+        - name: Deploy with docker-compose
+          env:
+            DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
+          run: |
+            echo "Stopping and removing existing containers..."
+            docker compose down --remove-orphans || true
+
+            echo "Pulling latest images..."
+            docker compose pull
+
+            echo "Starting services..."
+            docker compose up -d
