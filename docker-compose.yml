@@ -9,6 +9,8 @@ services:
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
       POSTGRES_DSN: "host=postgres user=${POSTGRES_USER:?err} password=${POSTGRES_PASSWORD:?err} dbname=${POSTGRES_DB:?err} port=5432 sslmode=disable"
+    ports:
+      - "8088:8080"
     depends_on:
       postgres:
         condition: service_healthy
