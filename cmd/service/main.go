@@ -1,7 +1,10 @@
 package main
 
 import (
+	netHttp "net/http"
+
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"telegram-vpn-bot/internal/handlers"
 	cancelusercallback "telegram-vpn-bot/internal/handlers/callback/ban_user"
@@ -48,5 +51,9 @@ func main() {
 	httpMessageHandler := http.New(log, messageSender, videoDownloader)
 	handler.RegisterMessageHandler("https://", httpMessageHandler)
 
-	handler.HandleUpdates()
+	go handler.HandleUpdates()
+
+	netHttp.Handle("/metrics", promhttp.Handler())
+	log.Info("Metrics server is running on port 8080")
+	log.Fatal(netHttp.ListenAndServe(":8080", nil))
 }

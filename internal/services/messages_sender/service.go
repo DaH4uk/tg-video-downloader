@@ -12,9 +12,10 @@ func New(bot *tgbotapi.BotAPI) *Sender {
 	}
 }
 
-func (s Sender) ReplyTo(message *tgbotapi.Message, text string) (*tgbotapi.Message, error) {
+func (s Sender) ReplyTo(message *tgbotapi.Message, text string, silent bool) (*tgbotapi.Message, error) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, text)
 	msg.ReplyToMessageID = message.MessageID
+	msg.DisableNotification = silent
 
 	result, err := s.bot.Send(msg)
 	if err != nil {

@@ -27,11 +27,11 @@ func New(log interfaces.Logger, messageSender *messages_sender.Sender, videoDown
 func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	if !strings.HasPrefix(message.Text, "https://") {
 		h.log.WithField("message", message).Warn("invalid URL format: must start with https://")
-		_, err := h.messageSender.ReplyTo(message, "invalid URL format: must start with https://")
+		_, err := h.messageSender.ReplyTo(message, "invalid URL format: must start with https://", false)
 		return err
 	}
 
-	msg, err := h.messageSender.ReplyTo(message, "Downloading video...")
+	msg, err := h.messageSender.ReplyTo(message, "Downloading video...", true)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	}(h.videoDownloader, videoPath)
 	if err != nil {
 		h.log.WithError(err).Warn("failed to download video")
-		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error())
+		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error(), false)
 		return err
 	}
 
