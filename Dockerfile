@@ -31,6 +31,7 @@ ARG TELEGRAM_BOT_TOKEN
 
 # Устанавливаем их как переменные окружения
 ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+ENV HTTP_PROXY=$HTTP_PROXY
 
 # Устанавливаем необходимые пакеты
 RUN apk --no-cache add ca-certificates
