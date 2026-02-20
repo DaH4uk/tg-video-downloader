@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"net/http"
 	"os"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -18,7 +20,14 @@ func InitBotApi() (*tgbotapi.BotAPI, error) {
 		return nil, errors.New("TELEGRAM_BOT_TOKEN environment variable not set")
 	}
 
-	bot, err := tgbotapi.NewBotAPI(telegramBotToken)
+	httpClient := &http.Client{
+		Timeout: 2 * time.Minute,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
+	bot, err := tgbotapi.NewBotAPIWithClient(telegramBotToken, tgbotapi.APIEndpoint, httpClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create telegram bot")
 	}

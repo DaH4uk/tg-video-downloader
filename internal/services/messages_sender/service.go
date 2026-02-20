@@ -1,6 +1,10 @@
 package messages_sender
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	"fmt"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 type Sender struct {
 	bot *tgbotapi.BotAPI
@@ -19,7 +23,7 @@ func (s Sender) ReplyTo(message *tgbotapi.Message, text string, silent bool) (*t
 
 	result, err := s.bot.Send(msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
 
 	return &result, nil
@@ -52,7 +56,7 @@ func (s Sender) VideoReplyTo(message *tgbotapi.Message, videoFilePath string) er
 
 	_, err := s.bot.Send(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("can't send video reply: %w", err)
 	}
 
 	return nil
