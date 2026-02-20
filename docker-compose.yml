@@ -10,7 +10,4 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
     ports:
       - "9988:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
