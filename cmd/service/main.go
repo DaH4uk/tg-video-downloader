@@ -7,12 +7,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"telegram-vpn-bot/internal/handlers"
-	"telegram-vpn-bot/internal/handlers/message/http"
-	"telegram-vpn-bot/internal/infrastructure/logger"
-	"telegram-vpn-bot/internal/services/message_handler"
-	"telegram-vpn-bot/internal/services/messages_sender"
-	"telegram-vpn-bot/internal/services/video_manager"
+	"tg-video-downloader/internal/handlers"
+	"tg-video-downloader/internal/handlers/message/http"
+	"tg-video-downloader/internal/infrastructure/logger"
+	"tg-video-downloader/internal/services/message_handler"
+	"tg-video-downloader/internal/services/messages_sender"
+	"tg-video-downloader/internal/services/video_manager"
 )
 
 func main() {

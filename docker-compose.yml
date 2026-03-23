@@ -1,6 +1,6 @@
 services:
   server:
-    container_name: tg-bot-server
+    container_name: tg-video-downloader
     image: ${REGISTRY_URL}/${IMAGE_NAME}:${VERSION}
     build:
       context: .
@@ -10,4 +10,3 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
     ports:
       - "9988:8080"
-

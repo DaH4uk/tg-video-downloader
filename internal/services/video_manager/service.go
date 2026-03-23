@@ -7,7 +7,7 @@ import (
 	"github.com/lrstanley/go-ytdlp"
 	"github.com/pkg/errors"
 
-	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 )
 
 type VideoManager interface {

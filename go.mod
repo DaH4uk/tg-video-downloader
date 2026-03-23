@@ -1,4 +1,4 @@
-module telegram-vpn-bot
+module tg-video-downloader
 
 go 1.25.0
 

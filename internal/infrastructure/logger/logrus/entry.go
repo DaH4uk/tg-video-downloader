@@ -3,7 +3,7 @@ package logrus
 import (
 	"net/http"
 
-	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 
 	"github.com/sirupsen/logrus"
 )

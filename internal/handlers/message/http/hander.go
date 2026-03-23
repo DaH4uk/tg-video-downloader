@@ -5,9 +5,9 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
-	"telegram-vpn-bot/internal/services/messages_sender"
-	"telegram-vpn-bot/internal/services/video_manager"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/services/messages_sender"
+	"tg-video-downloader/internal/services/video_manager"
 )
 
 type MessageHandler struct {

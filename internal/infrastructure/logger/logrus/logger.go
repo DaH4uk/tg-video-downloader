@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/sirupsen/logrus"

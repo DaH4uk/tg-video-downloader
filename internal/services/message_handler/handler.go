@@ -4,8 +4,8 @@ import (
 	"strings"
 	"sync"
 
-	"telegram-vpn-bot/internal/handlers/message"
-	"telegram-vpn-bot/internal/infrastructure/logger"
+	"tg-video-downloader/internal/handlers/message"
+	"tg-video-downloader/internal/infrastructure/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"

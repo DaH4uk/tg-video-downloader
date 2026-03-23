@@ -1,8 +1,8 @@
 package logger
 
 import (
-	"telegram-vpn-bot/internal/infrastructure/logger/interfaces"
-	"telegram-vpn-bot/internal/infrastructure/logger/logrus"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/logger/logrus"
 )
 
 var (
