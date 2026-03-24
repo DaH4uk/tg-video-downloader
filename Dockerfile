@@ -40,9 +40,6 @@ ENV HTTP_PROXY=$HTTP_PROXY
 # Устанавливаем необходимые пакеты
 RUN apk --no-cache add ca-certificates
 
-# Копируем .env файл из стадии сборки
-COPY --from=build /app/.env /root/.env
-
 # Копируем бинарный файл из стадии сборки
 COPY --from=build /app/service /root/service
 
