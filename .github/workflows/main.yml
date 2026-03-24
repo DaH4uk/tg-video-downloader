@@ -99,11 +99,6 @@ jobs:
               exit 1
             }
 
-            if [ -z "${{ secrets.GHCR_TOKEN }}" ]; then
-              echo "GHCR_TOKEN is not configured"
-              exit 1
-            fi
-
             echo "IMAGE_NAME=${{ env.IMAGE_NAME }}" > .env
             echo "VERSION=${{ env.VERSION }}" >> .env
             echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
