@@ -22,8 +22,8 @@ import (
 func main() {
 	log := logger.GetLogger()
 
-	if err := godotenv.Overload(); err != nil {
-		log.Fatal(errors.Wrap(err, "failed to load .env file"))
+	if err := godotenv.Load(); err != nil {
+		log.Warn(errors.Wrap(err, "failed to load .env file, using environment variables"))
 	}
 
 	telegramBotApi, err := handlers.InitBotApi()
