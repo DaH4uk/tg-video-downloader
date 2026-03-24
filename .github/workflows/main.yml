@@ -13,7 +13,7 @@ env:
 
 jobs:
   lint:
-    runs-on: [self-hosted, linux, arm64, synology]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
           GONOSUMDB: '*'
 
   build:
-    runs-on: [self-hosted, linux, arm64, synology]
+    runs-on: ubuntu-latest
     needs: lint
     if: github.event_name == 'pull_request' && github.ref != 'refs/heads/main'
     steps:
@@ -58,7 +58,7 @@ jobs:
         run: CGO_ENABLED=0 GOOS=linux go build -o /dev/null ./cmd/service
 
   build_docker:
-    runs-on: [self-hosted, linux, arm64, synology]
+    runs-on: ubuntu-latest
     needs: lint
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: Teamcloud AM
