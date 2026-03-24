@@ -70,13 +70,13 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
-      - name: Upload docker-compose
+      - name: Upload deploy compose
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ vars.SSH_HOST }}
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: docker-compose.yml
+          source: docker-compose.deploy.yml
           target: ~/tg-video-downloader
 
       - name: Deploy via SSH
@@ -99,6 +99,11 @@ jobs:
               exit 1
             }
 
+            if [ -z "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "GHCR_TOKEN is not configured"
+              exit 1
+            fi
+
             echo "IMAGE_NAME=${{ env.IMAGE_NAME }}" > .env
             echo "VERSION=${{ env.VERSION }}" >> .env
             echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
@@ -110,5 +115,5 @@ jobs:
               -u "${{ github.repository_owner }}" \
               --password-stdin
 
-            docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose -f docker-compose.deploy.yml pull
+            docker compose -f docker-compose.deploy.yml up -d --remove-orphans
