@@ -8,5 +8,7 @@ services:
       - .env
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
+      METRICS_USERNAME: ${METRICS_USERNAME:?err}
+      METRICS_PASSWORD: ${METRICS_PASSWORD:?err}
     ports:
-      - "9900:9900"
+      - "9988:9900"
