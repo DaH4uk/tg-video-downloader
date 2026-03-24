@@ -1,28 +1,33 @@
 package message_handler
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"sync"
 
 	"tg-video-downloader/internal/handlers/message"
 	"tg-video-downloader/internal/infrastructure/logger"
+	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/pkg/errors"
 )
 
-var log = logger.GetLogger()
-var wg sync.WaitGroup
+const maxConcurrent = 5
 
 type TelegramHandler struct {
 	bot             *tgbotapi.BotAPI
 	messageHandlers map[string]message.Handler
+	log             interfaces.Logger
+	sem             chan struct{}
 }
 
 func New(bot *tgbotapi.BotAPI) *TelegramHandler {
 	return &TelegramHandler{
 		bot:             bot,
 		messageHandlers: map[string]message.Handler{},
+		log:             logger.GetLogger(),
+		sem:             make(chan struct{}, maxConcurrent),
 	}
 }
 
@@ -30,25 +35,43 @@ func (h *TelegramHandler) RegisterMessageHandler(messagePrefix string, handler m
 	h.messageHandlers[strings.ToLower(messagePrefix)] = handler
 }
 
-func (h *TelegramHandler) HandleUpdates() {
+func (h *TelegramHandler) HandleUpdates(ctx context.Context) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := h.bot.GetUpdatesChan(u)
-	log.Info("Handling telegram requests")
-	for update := range updates {
-		wg.Add(1)
-		go h.handleUpdate(update)
+	h.log.Info("Handling telegram requests")
+
+	var wg sync.WaitGroup
+	for {
+		select {
+		case <-ctx.Done():
+			h.bot.StopReceivingUpdates()
+			wg.Wait()
+			return
+		case update, ok := <-updates:
+			if !ok {
+				wg.Wait()
+				return
+			}
+			wg.Add(1)
+			go h.handleUpdate(&wg, update)
+		}
 	}
-	wg.Wait()
 }
 
-func (h *TelegramHandler) handleUpdate(update tgbotapi.Update) {
+func (h *TelegramHandler) handleUpdate(wg *sync.WaitGroup, update tgbotapi.Update) {
 	defer wg.Done()
-	m := update.Message
+	defer func() {
+		if r := recover(); r != nil {
+			h.log.WithField("panic", fmt.Sprintf("%v", r)).Error("recovered from panic in update handler")
+		}
+	}()
 
-	err := h.handleMessage(m)
-	if err != nil {
-		log.Warn("handle m error: ", err)
+	h.sem <- struct{}{}
+	defer func() { <-h.sem }()
+
+	if err := h.handleMessage(update.Message); err != nil {
+		h.log.Warn("handle message error: ", err)
 	}
 }
 
@@ -57,7 +80,7 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 		return nil
 	}
 
-	log.Debugf("[%s] %s", message.From.UserName, message.Text)
+	h.log.Debugf("[%s] %s", message.From.UserName, message.Text)
 
 	messageText := strings.ToLower(message.Text)
 	for messagePrefix, handler := range h.messageHandlers {
@@ -66,17 +89,6 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 		}
 	}
 
-	log.Debugf("Message handler not found for message: %s", message.Text)
-
-	return nil
-}
-
-func (h *TelegramHandler) handleEmptyCommand(message *tgbotapi.Message) error {
-	messageText := tgbotapi.NewMessage(message.Chat.ID, "Такая команда не найдена")
-	_, err := h.bot.Send(messageText)
-	if err != nil {
-		return errors.Wrap(err, "sending command response error")
-	}
-
+	h.log.Debugf("Message handler not found for message: %s", message.Text)
 	return nil
 }

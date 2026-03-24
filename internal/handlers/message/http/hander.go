@@ -42,10 +42,13 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	videoPath, err := h.videoDownloader.DownloadVideo(message.Text)
 
 	defer func(videoDownloader video_manager.VideoManager, fileName string) {
-		err := videoDownloader.DeleteVideo(fileName)
-		h.log.Info("deleted video:" + fileName)
-		if err != nil {
+		if fileName == "" {
+			return
+		}
+		if err := videoDownloader.DeleteVideo(fileName); err != nil {
 			h.log.WithError(err).Warn("failed to delete video")
+		} else {
+			h.log.Info("deleted video: " + fileName)
 		}
 	}(h.videoDownloader, videoPath)
 	if err != nil {

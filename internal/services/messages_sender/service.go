@@ -33,7 +33,7 @@ func (s Sender) EditMessage(chatID int64, messageID int, newText string) error {
 	editMsg := tgbotapi.NewEditMessageText(chatID, messageID, newText)
 	_, err := s.bot.Send(editMsg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to edit message: %w", err)
 	}
 
 	return nil
@@ -43,7 +43,7 @@ func (s Sender) DeleteMessage(chatID int64, messageID int) error {
 	deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
 	_, err := s.bot.Send(deleteMsg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete message: %w", err)
 	}
 
 	return nil

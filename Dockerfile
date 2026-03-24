@@ -17,8 +17,6 @@ RUN for i in 1 2 3 4 5; do go mod download && break || sleep 3; done
 ## Прогоняем тесты
 #RUN go test -cover -v ./...
 
-RUN ls
-
 # Собираем бинарный файл
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/service ./cmd/service
 

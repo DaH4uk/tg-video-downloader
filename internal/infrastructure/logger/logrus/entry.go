@@ -21,21 +21,21 @@ func (e Entry) WithField(k string, v interface{}) interfaces.Entry {
 }
 
 func (e Entry) WithFields(fields map[string]interface{}) interfaces.Entry {
-	return Entry{
+	return &Entry{
 		EntryObject: e.EntryObject,
 		loggerEntry: e.loggerEntry.WithFields(fields),
 	}
 }
 
 func (e Entry) WithError(err error) interfaces.Entry {
-	return Entry{
+	return &Entry{
 		EntryObject: e.EntryObject,
 		loggerEntry: e.loggerEntry.WithError(err),
 	}
 }
 
 func (e Entry) WithRequest(request *http.Request) interfaces.Entry {
-	return Entry{
+	return &Entry{
 		EntryObject: e.EntryObject,
 		loggerEntry: e.loggerEntry.WithField(requestKey, request),
 	}

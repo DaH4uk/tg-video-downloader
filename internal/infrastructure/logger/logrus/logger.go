@@ -85,6 +85,7 @@ func (l Logger) Debugf(s string, args ...interface{}) {
 
 func (l Logger) Fatal(args ...interface{}) {
 	l.getLoggerEntry().Error(args...)
+	os.Exit(1)
 }
 
 func (l Logger) WithField(k string, v interface{}) interfaces.Entry {

@@ -3,12 +3,15 @@ package video_manager
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/lrstanley/go-ytdlp"
 	"github.com/pkg/errors"
 
 	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 )
+
+const downloadTimeout = 10 * time.Minute
 
 type VideoManager interface {
 	DownloadVideo(url string) (string, error)
@@ -20,10 +23,13 @@ type DefaultVideoManager struct {
 	log interfaces.Logger
 }
 
-func New(log interfaces.Logger) VideoManager {
+func New(log interfaces.Logger) (VideoManager, error) {
 	log.Info("Checking ytdlp lib installed")
-	// If yt-dlp isn't installed yet, download and cache it for further use.
-	ytdlp.MustInstall(context.TODO(), nil)
+	installCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	if _, err := ytdlp.Install(installCtx, nil); err != nil {
+		return nil, errors.Wrap(err, "failed to install ytdlp")
+	}
 	log.Info("ytdlp lib installed")
 
 	dl := ytdlp.New().
@@ -37,20 +43,23 @@ func New(log interfaces.Logger) VideoManager {
 	return DefaultVideoManager{
 		dl:  dl,
 		log: log,
-	}
+	}, nil
 }
 
 func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
-	d.log.Info("Downloading video from: " + url)
-	result, err := d.dl.Run(context.Background(), url)
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
 
+	d.log.Info("Downloading video from: " + url)
+	result, err := d.dl.Run(ctx, url)
 	if err != nil {
 		d.log.WithError(err).Warn("Failed to download video from: " + url)
-		return "", err
+		return "", errors.Wrap(err, "failed to run yt-dlp")
 	}
+
 	infos, err := result.GetExtractedInfo()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to parse yt-dlp output")
 	}
 
 	for _, info := range infos {

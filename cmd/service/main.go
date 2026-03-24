@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
 	netHttp "net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -17,27 +21,48 @@ import (
 
 func main() {
 	log := logger.GetLogger()
-	err := godotenv.Overload()
-	if err != nil {
+
+	if err := godotenv.Overload(); err != nil {
 		log.Fatal(errors.Wrap(err, "failed to load .env file"))
 	}
 
 	telegramBotApi, err := handlers.InitBotApi()
 	if err != nil {
-		panic(errors.Wrap(err, "failed to init telegram bot api"))
+		log.Fatal(errors.Wrap(err, "failed to init telegram bot api"))
 	}
 
-	videoDownloader := video_manager.New(log)
-	messageSender := messages_sender.New(telegramBotApi)
+	videoDownloader, err := video_manager.New(log)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to initialize video downloader"))
+	}
 
+	messageSender := messages_sender.New(telegramBotApi)
 	handler := message_handler.New(telegramBotApi)
 
 	httpMessageHandler := http.New(log, messageSender, videoDownloader)
 	handler.RegisterMessageHandler("https://", httpMessageHandler)
 
-	go handler.HandleUpdates()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go handler.HandleUpdates(ctx)
 
 	netHttp.Handle("/metrics", promhttp.Handler())
-	log.Info("Metrics server is running on port 8080")
-	log.Fatal(netHttp.ListenAndServe(":8080", nil))
+	srv := &netHttp.Server{Addr: ":8080"}
+
+	go func() {
+		log.Info("Metrics server is running on port 8080")
+		if err := srv.ListenAndServe(); err != nil && err != netHttp.ErrServerClosed {
+			log.WithError(err).Error("metrics server error")
+		}
+	}()
+
+	<-ctx.Done()
+	log.Info("Shutting down gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.WithError(err).Warn("HTTP server shutdown error")
+	}
 }
