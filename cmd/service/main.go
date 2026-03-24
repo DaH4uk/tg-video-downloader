@@ -48,10 +48,10 @@ func main() {
 	go handler.HandleUpdates(ctx)
 
 	netHttp.Handle("/metrics", promhttp.Handler())
-	srv := &netHttp.Server{Addr: ":8080"}
+	srv := &netHttp.Server{Addr: ":9900"}
 
 	go func() {
-		log.Info("Metrics server is running on port 8080")
+		log.Info("Metrics server is running on port 9900")
 		if err := srv.ListenAndServe(); err != nil && err != netHttp.ErrServerClosed {
 			log.WithError(err).Error("metrics server error")
 		}

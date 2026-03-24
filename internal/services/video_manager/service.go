@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"tg-video-downloader/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/metrics"
 )
 
 const downloadTimeout = 10 * time.Minute
@@ -51,25 +52,33 @@ func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
 	defer cancel()
 
 	d.log.Info("Downloading video from: " + url)
+
+	start := time.Now()
 	result, err := d.dl.Run(ctx, url)
+	metrics.DownloadDuration.Observe(time.Since(start).Seconds())
+
 	if err != nil {
+		metrics.DownloadTotal.WithLabelValues("error").Inc()
 		d.log.WithError(err).Warn("Failed to download video from: " + url)
 		return "", errors.Wrap(err, "failed to run yt-dlp")
 	}
 
 	infos, err := result.GetExtractedInfo()
 	if err != nil {
+		metrics.DownloadTotal.WithLabelValues("error").Inc()
 		return "", errors.Wrap(err, "failed to parse yt-dlp output")
 	}
 
 	for _, info := range infos {
 		filename := info.Filename
 		if filename != nil {
+			metrics.DownloadTotal.WithLabelValues("success").Inc()
 			d.log.Info("Successfully downloaded video from: " + url + " to: " + *filename)
 			return *filename, nil
 		}
 	}
 
+	metrics.DownloadTotal.WithLabelValues("error").Inc()
 	return "", errors.New("failed to get video filename")
 }
 

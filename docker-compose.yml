@@ -9,4 +9,4 @@ services:
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
     ports:
-      - "9988:8080"
+      - "9900:9900"

@@ -2,10 +2,12 @@ package http
 
 import (
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"tg-video-downloader/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/metrics"
 	"tg-video-downloader/internal/services/messages_sender"
 	"tg-video-downloader/internal/services/video_manager"
 )
@@ -61,5 +63,14 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	if err != nil {
 		return err
 	}
-	return h.messageSender.VideoReplyTo(message, videoPath)
+
+	start := time.Now()
+	err = h.messageSender.VideoReplyTo(message, videoPath)
+	metrics.UploadDuration.Observe(time.Since(start).Seconds())
+	if err != nil {
+		metrics.UploadTotal.WithLabelValues("error").Inc()
+		return err
+	}
+	metrics.UploadTotal.WithLabelValues("success").Inc()
+	return nil
 }

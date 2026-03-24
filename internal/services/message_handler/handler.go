@@ -9,6 +9,7 @@ import (
 	"tg-video-downloader/internal/handlers/message"
 	"tg-video-downloader/internal/infrastructure/logger"
 	"tg-video-downloader/internal/infrastructure/logger/interfaces"
+	"tg-video-downloader/internal/infrastructure/metrics"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -63,6 +64,7 @@ func (h *TelegramHandler) handleUpdate(wg *sync.WaitGroup, update tgbotapi.Updat
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
+			metrics.MessagesProcessed.WithLabelValues("error").Inc()
 			h.log.WithField("panic", fmt.Sprintf("%v", r)).Error("recovered from panic in update handler")
 		}
 	}()
@@ -70,8 +72,16 @@ func (h *TelegramHandler) handleUpdate(wg *sync.WaitGroup, update tgbotapi.Updat
 	h.sem <- struct{}{}
 	defer func() { <-h.sem }()
 
+	isTextMessage := update.Message != nil && update.Message.Text != ""
+	if isTextMessage {
+		metrics.MessagesReceived.Inc()
+	}
+
 	if err := h.handleMessage(update.Message); err != nil {
+		metrics.MessagesProcessed.WithLabelValues("error").Inc()
 		h.log.Warn("handle message error: ", err)
+	} else if isTextMessage {
+		metrics.MessagesProcessed.WithLabelValues("success").Inc()
 	}
 }
 
