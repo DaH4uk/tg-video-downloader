@@ -1,7 +1,7 @@
 services:
   server:
     container_name: tg-video-downloader
-    image: ${REGISTRY_URL}/${IMAGE_NAME}:${VERSION}
+    image: ghcr.io/${IMAGE_NAME}:${VERSION}
     build:
       context: .
     env_file:
