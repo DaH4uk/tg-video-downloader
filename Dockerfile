@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine as build
+FROM golang:1.26-alpine AS build
 
 # Убедимся, что Go установлен
 RUN go version
