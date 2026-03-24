@@ -25,18 +25,21 @@ jobs:
 
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l $(find . -name "*.go" -not -path "./vendor/*"))
+          unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then
             echo "The following files are not formatted:"
             echo "$unformatted"
             exit 1
           fi
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Install golangci-lint
         run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
       - name: Run golangci-lint
-        run: golangci-lint run --modules-download-mode=vendor
+        run: golangci-lint run
 
   build:
     runs-on: [self-hosted, linux, arm64, synology]
@@ -52,7 +55,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build
-        run: CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o /dev/null ./cmd/service
+        run: CGO_ENABLED=0 GOOS=linux go build -o /dev/null ./cmd/service
 
   build_docker:
     runs-on: [self-hosted, linux, arm64, synology]
