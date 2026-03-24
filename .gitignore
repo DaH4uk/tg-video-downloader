@@ -35,3 +35,6 @@ go.work.sum
 
 # local change artifacts
 changes/
+
+# macOS
+.DS_Store
