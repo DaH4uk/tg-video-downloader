@@ -11,7 +11,7 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
-ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct GOSUMDB=sum.golang.org
+ENV GOPROXY=https://proxy.golang.org,direct
 
 # Сначала копируем только зависимости для кэширования слоя
 COPY go.mod go.sum ./
