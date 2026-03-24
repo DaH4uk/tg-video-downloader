@@ -1,0 +1,10 @@
+services:
+  server:
+    container_name: tg-video-downloader
+    image: ghcr.io/${IMAGE_NAME}:${VERSION}
+    env_file:
+      - .env
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
+    ports:
+      - "9988:8080"
