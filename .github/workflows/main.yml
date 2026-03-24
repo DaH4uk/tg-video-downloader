@@ -36,6 +36,10 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          install-mode: goinstall
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GONOSUMDB: '*'
 
   build:
     runs-on: [self-hosted, linux, arm64, synology]
