@@ -99,11 +99,6 @@ jobs:
               exit 1
             }
 
-            if [ -z "${{ secrets.GHCR_TOKEN }}" ]; then
-              echo "GHCR_TOKEN is not configured"
-              exit 1
-            fi
-
             echo "IMAGE_NAME=${{ env.IMAGE_NAME }}" > .env
             echo "VERSION=${{ env.VERSION }}" >> .env
             echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
@@ -111,7 +106,7 @@ jobs:
             echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
             echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
 
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u "${{ github.repository_owner }}" \
               --password-stdin
 
