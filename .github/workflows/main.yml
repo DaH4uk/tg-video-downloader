@@ -32,14 +32,14 @@ jobs:
             exit 1
           fi
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
       - name: Run golangci-lint
-        run: golangci-lint run
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          install-mode: goinstall
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GONOSUMDB: '*'
 
   build:
     runs-on: [self-hosted, linux, arm64, synology]
