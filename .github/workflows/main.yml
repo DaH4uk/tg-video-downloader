@@ -9,6 +9,7 @@ on:
 env:
   IMAGE_NAME: dah4uk/tg-video-downloader
   VERSION: 'v0.0.${{ github.run_number }}'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   lint:
@@ -31,10 +32,11 @@ jobs:
             exit 1
           fi
 
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
+        run: golangci-lint run
 
   build:
     runs-on: [self-hosted, linux, arm64, synology]
