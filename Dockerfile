@@ -3,28 +3,16 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine as build
 ARG TARGETOS
 ARG TARGETARCH
 
-# Убедимся, что Go установлен
-RUN go version
-
-# Устанавливаем git (необходим для go mod download)
-RUN apk add --no-cache git
-
 WORKDIR /app
 
-ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct GOSUMDB=sum.golang.org
-
-# Сначала копируем только зависимости для кэширования слоя
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Копируем остальной исходный код
+# Копируем исходный код вместе с вендорными зависимостями
 COPY . .
 
 ## Прогоняем тесты
 #RUN go test -cover -v ./...
 
 # Собираем бинарный файл под целевую платформу
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /app/service ./cmd/service
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=vendor -o /app/service ./cmd/service
 
 
 # Используем минимальный базовый образ
