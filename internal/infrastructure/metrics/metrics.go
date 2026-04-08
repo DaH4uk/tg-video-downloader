@@ -51,19 +51,4 @@ var (
 		Name:      "upload_total",
 		Help:      "Total number of video upload attempts to Telegram",
 	}, []string{"status"})
-
-	// TranscodeDuration tracks ffmpeg transcoding time in seconds.
-	TranscodeDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-		Namespace: namespace,
-		Name:      "transcode_duration_seconds",
-		Help:      "Duration of video transcoding via ffmpeg in seconds",
-		Buckets:   []float64{5, 10, 30, 60, 120, 300, 600},
-	})
-
-	// TranscodeTotal counts transcode attempts by status.
-	TranscodeTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace,
-		Name:      "transcode_total",
-		Help:      "Total number of video transcode attempts",
-	}, []string{"status"})
 )
