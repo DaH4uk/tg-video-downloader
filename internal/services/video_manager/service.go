@@ -89,7 +89,9 @@ func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temp file for transcoding")
 	}
-	f.Close()
+	if err = f.Close(); err != nil {
+		return "", errors.Wrap(err, "failed to close temp file")
+	}
 	outputPath := f.Name()
 
 	d.log.Info("Transcoding video: " + inputPath)
