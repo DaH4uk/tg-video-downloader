@@ -59,13 +59,35 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		return err
 	}
 
+	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Transcoding video...")
+	if err != nil {
+		return err
+	}
+
+	transcodedPath, err := h.videoDownloader.TranscodeVideo(videoPath)
+	defer func(videoDownloader video_manager.VideoManager, fileName string) {
+		if fileName == "" {
+			return
+		}
+		if err := videoDownloader.DeleteVideo(fileName); err != nil {
+			h.log.WithError(err).Warn("failed to delete transcoded video")
+		} else {
+			h.log.Info("deleted transcoded video: " + fileName)
+		}
+	}(h.videoDownloader, transcodedPath)
+	if err != nil {
+		h.log.WithError(err).Warn("failed to transcode video")
+		_, err = h.messageSender.ReplyTo(message, "failed to transcode video: "+err.Error(), false)
+		return err
+	}
+
 	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Uploading video...")
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	err = h.messageSender.VideoReplyTo(message, videoPath)
+	err = h.messageSender.VideoReplyTo(message, transcodedPath)
 	metrics.UploadDuration.Observe(time.Since(start).Seconds())
 	if err != nil {
 		metrics.UploadTotal.WithLabelValues("error").Inc()
