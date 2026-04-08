@@ -10,7 +10,7 @@ Supported sources: anything yt-dlp supports (YouTube, Twitter/X, Instagram, TikT
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.26+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (installed automatically on first run via go-ytdlp)
 
 ## Environment variables
