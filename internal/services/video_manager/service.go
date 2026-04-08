@@ -3,7 +3,6 @@ package video_manager
 import (
 	"context"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/lrstanley/go-ytdlp"
@@ -17,7 +16,6 @@ const downloadTimeout = 10 * time.Minute
 
 type VideoManager interface {
 	DownloadVideo(url string) (string, error)
-	TranscodeVideo(inputPath string) (string, error)
 	DeleteVideo(fileName string) error
 }
 
@@ -34,12 +32,6 @@ func New(log interfaces.Logger) (VideoManager, error) {
 		return nil, errors.Wrap(err, "failed to install ytdlp")
 	}
 	log.Info("ytdlp lib installed")
-
-	log.Info("Checking ffmpeg installed")
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		return nil, errors.Wrap(err, "ffmpeg not found in PATH")
-	}
-	log.Info("ffmpeg found")
 
 	dl := ytdlp.New().
 		PrintJSON().
@@ -88,48 +80,6 @@ func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
 
 	metrics.DownloadTotal.WithLabelValues("error").Inc()
 	return "", errors.New("failed to get video filename")
-}
-
-func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
-	f, err := os.CreateTemp("", "tgvd-*.tc.mp4")
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create temp file for transcoding")
-	}
-	if err = f.Close(); err != nil {
-		return "", errors.Wrap(err, "failed to close temp file")
-	}
-	outputPath := f.Name()
-
-	d.log.Info("Transcoding video: " + inputPath)
-
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "ffmpeg",
-		"-i", inputPath,
-		"-c:v", "libx264",
-		"-preset", "fast",
-		"-crf", "23",
-		"-c:a", "aac",
-		"-b:a", "128k",
-		"-pix_fmt", "yuv420p",
-		"-movflags", "+faststart",
-		"-y",
-		outputPath,
-	)
-
-	start := time.Now()
-	out, err := cmd.CombinedOutput()
-	metrics.TranscodeDuration.Observe(time.Since(start).Seconds())
-	if err != nil {
-		metrics.TranscodeTotal.WithLabelValues("error").Inc()
-		d.log.WithError(err).WithField("ffmpeg_output", string(out)).Warn("ffmpeg failed")
-		return "", errors.New("ffmpeg transcoding failed")
-	}
-
-	metrics.TranscodeTotal.WithLabelValues("success").Inc()
-	d.log.Info("Transcoded video to: " + outputPath)
-	return outputPath, nil
 }
 
 func (d DefaultVideoManager) DeleteVideo(fileName string) error {

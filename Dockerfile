@@ -38,7 +38,7 @@ ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 ENV HTTP_PROXY=$HTTP_PROXY
 
 # Устанавливаем необходимые пакеты
-RUN apk --no-cache add ca-certificates ffmpeg
+RUN apk --no-cache add ca-certificates
 
 # Копируем бинарный файл из стадии сборки
 COPY --from=build /app/service /root/service
