@@ -5,16 +5,18 @@ on:
     branches: [ "**" ]
 
 jobs:
-  lint:
+  go:
+    name: Go — fmt / lint / build
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: Check formatting
         run: |
@@ -25,11 +27,17 @@ jobs:
             exit 1
           fi
 
-      - name: Run golangci-lint
+      - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           install-mode: goinstall
-        env:
-          GOPROXY: https://proxy.golang.org,direct
-          GONOSUMDB: '*'
+          args: --timeout=5m
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+
