@@ -35,6 +35,12 @@ func New(log interfaces.Logger) (VideoManager, error) {
 	}
 	log.Info("ytdlp lib installed")
 
+	log.Info("Checking ffmpeg installed")
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		return nil, errors.Wrap(err, "ffmpeg not found in PATH")
+	}
+	log.Info("ffmpeg found")
+
 	dl := ytdlp.New().
 		PrintJSON().
 		NoProgress().
