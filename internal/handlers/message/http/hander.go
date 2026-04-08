@@ -76,9 +76,10 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		}
 	}(h.videoDownloader, transcodedPath)
 	if err != nil {
-		h.log.WithError(err).Warn("failed to transcode video")
-		_, err = h.messageSender.ReplyTo(message, "failed to transcode video: "+err.Error(), false)
-		return err
+		transcodeErr := err
+		h.log.WithError(transcodeErr).Warn("failed to transcode video")
+		_, _ = h.messageSender.ReplyTo(message, "failed to transcode video: "+transcodeErr.Error(), false)
+		return transcodeErr
 	}
 
 	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Uploading video...")

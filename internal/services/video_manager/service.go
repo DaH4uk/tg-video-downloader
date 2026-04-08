@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/lrstanley/go-ytdlp"
@@ -86,11 +85,19 @@ func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
 }
 
 func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
-	outputPath := strings.TrimSuffix(inputPath, ".mp4") + ".tc.mp4"
+	f, err := os.CreateTemp("", "tgvd-*.tc.mp4")
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temp file for transcoding")
+	}
+	f.Close()
+	outputPath := f.Name()
 
 	d.log.Info("Transcoding video: " + inputPath)
 
-	cmd := exec.Command("ffmpeg",
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-i", inputPath,
 		"-c:v", "libx264",
 		"-preset", "fast",
@@ -103,10 +110,16 @@ func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
 		outputPath,
 	)
 
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", errors.Wrapf(err, "ffmpeg failed: %s", string(out))
+	start := time.Now()
+	out, err := cmd.CombinedOutput()
+	metrics.TranscodeDuration.Observe(time.Since(start).Seconds())
+	if err != nil {
+		metrics.TranscodeTotal.WithLabelValues("error").Inc()
+		d.log.WithError(err).WithField("ffmpeg_output", string(out)).Warn("ffmpeg failed")
+		return "", errors.New("ffmpeg transcoding failed")
 	}
 
+	metrics.TranscodeTotal.WithLabelValues("success").Inc()
 	d.log.Info("Transcoded video to: " + outputPath)
 	return outputPath, nil
 }
