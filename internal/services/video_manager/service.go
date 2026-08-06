@@ -13,22 +13,26 @@ import (
 	"tg-video-downloader/internal/infrastructure/metrics"
 )
 
-const downloadTimeout = 10 * time.Minute
+const (
+	maxFileSize    = "500M"
+	durationFilter = "duration < 900"
+	outputTemplate = "%(extractor)s - %(title).100B.%(ext)s"
+	installTimeout = 5 * time.Minute
+)
 
 type VideoManager interface {
-	DownloadVideo(url string) (string, error)
-	TranscodeVideo(inputPath string) (string, error)
-	DeleteVideo(fileName string) error
+	DownloadVideoTo(ctx context.Context, url, dir string) (string, error)
+	NeedsTranscode(ctx context.Context, path string) (bool, error)
+	TranscodeVideoTo(ctx context.Context, inputPath, dir string) (string, error)
 }
 
 type DefaultVideoManager struct {
-	dl  *ytdlp.Command
 	log interfaces.Logger
 }
 
 func New(log interfaces.Logger) (VideoManager, error) {
 	log.Info("Checking ytdlp lib installed")
-	installCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	installCtx, cancel := context.WithTimeout(context.Background(), installTimeout)
 	defer cancel()
 	if _, err := ytdlp.Install(installCtx, nil); err != nil {
 		return nil, errors.Wrap(err, "failed to install ytdlp")
@@ -39,7 +43,19 @@ func New(log interfaces.Logger) (VideoManager, error) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		return nil, errors.Wrap(err, "ffmpeg not found in PATH")
 	}
-	log.Info("ffmpeg found")
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		return nil, errors.Wrap(err, "ffprobe not found in PATH")
+	}
+	log.Info("ffmpeg and ffprobe found")
+
+	return DefaultVideoManager{log: log}, nil
+}
+
+// DownloadVideoTo downloads the video into dir and returns the resulting path.
+// The command is built per call: a shared builder would race between concurrent
+// downloads.
+func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir string) (string, error) {
+	d.log.Info("Downloading video from: " + url)
 
 	dl := ytdlp.New().
 		PrintJSON().
@@ -47,27 +63,23 @@ func New(log interfaces.Logger) (VideoManager, error) {
 		FormatSort("res,ext:mp4:m4a").
 		NoPlaylist().
 		NoOverwrites().
-		Output("%(extractor)s - %(title)s.%(ext)s")
-
-	return DefaultVideoManager{
-		dl:  dl,
-		log: log,
-	}, nil
-}
-
-func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
-	defer cancel()
-
-	d.log.Info("Downloading video from: " + url)
+		MaxFileSize(maxFileSize).
+		MatchFilters(durationFilter).
+		Paths(dir).
+		Output(outputTemplate)
 
 	start := time.Now()
-	result, err := d.dl.Run(ctx, url)
+	result, err := dl.Run(ctx, url)
 	metrics.DownloadDuration.Observe(time.Since(start).Seconds())
 
 	if err != nil {
 		metrics.DownloadTotal.WithLabelValues("error").Inc()
 		d.log.WithError(err).Warn("Failed to download video from: " + url)
+		if result != nil {
+			if rejected := classifyRejection(result.Stdout + "\n" + result.Stderr); rejected != nil {
+				return "", rejected
+			}
+		}
 		return "", errors.Wrap(err, "failed to run yt-dlp")
 	}
 
@@ -78,20 +90,29 @@ func (d DefaultVideoManager) DownloadVideo(url string) (string, error) {
 	}
 
 	for _, info := range infos {
-		filename := info.Filename
-		if filename != nil {
+		if info.Filename != nil {
 			metrics.DownloadTotal.WithLabelValues("success").Inc()
-			d.log.Info("Successfully downloaded video from: " + url + " to: " + *filename)
-			return *filename, nil
+			d.log.Info("Successfully downloaded video from: " + url + " to: " + *info.Filename)
+			return *info.Filename, nil
 		}
 	}
 
 	metrics.DownloadTotal.WithLabelValues("error").Inc()
+	if rejected := classifyRejection(result.Stdout + "\n" + result.Stderr); rejected != nil {
+		return "", rejected
+	}
 	return "", errors.New("failed to get video filename")
 }
 
-func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
-	f, err := os.CreateTemp("", "tgvd-*.tc.mp4")
+// NeedsTranscode reports whether the file must be re-encoded before it can be
+// handed to a client that expects H.264/AAC in mp4.
+func (d DefaultVideoManager) NeedsTranscode(ctx context.Context, path string) (bool, error) {
+	return probeNeedsTranscode(ctx, path)
+}
+
+// TranscodeVideoTo re-encodes the file into dir and returns the new path.
+func (d DefaultVideoManager) TranscodeVideoTo(ctx context.Context, inputPath, dir string) (string, error) {
+	f, err := os.CreateTemp(dir, "tgvd-*.tc.mp4")
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temp file for transcoding")
 	}
@@ -101,9 +122,6 @@ func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
 	outputPath := f.Name()
 
 	d.log.Info("Transcoding video: " + inputPath)
-
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
-	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-i", inputPath,
@@ -130,12 +148,4 @@ func (d DefaultVideoManager) TranscodeVideo(inputPath string) (string, error) {
 	metrics.TranscodeTotal.WithLabelValues("success").Inc()
 	d.log.Info("Transcoded video to: " + outputPath)
 	return outputPath, nil
-}
-
-func (d DefaultVideoManager) DeleteVideo(fileName string) error {
-	err := os.Remove(fileName)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete video file")
-	}
-	return nil
 }

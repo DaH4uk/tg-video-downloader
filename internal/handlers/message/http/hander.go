@@ -1,6 +1,8 @@
 package http
 
 import (
+	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"tg-video-downloader/internal/services/messages_sender"
 	"tg-video-downloader/internal/services/video_manager"
 )
+
+const botDownloadTimeout = 10 * time.Minute
 
 type MessageHandler struct {
 	messageSender   *messages_sender.Sender
@@ -41,45 +45,37 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		_ = messageSender.DeleteMessage(chatID, messageID)
 	}(h.messageSender, message.Chat.ID, msg.MessageID)
 
-	videoPath, err := h.videoDownloader.DownloadVideo(message.Text)
+	dir, err := os.MkdirTemp("", "tgvd-bot-*")
+	if err != nil {
+		h.log.WithError(err).Warn("failed to create temp dir")
+		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error(), false)
+		return err
+	}
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			h.log.WithError(err).Warn("failed to clean up temp dir")
+		}
+	}()
 
-	defer func(videoDownloader video_manager.VideoManager, fileName string) {
-		if fileName == "" {
-			return
-		}
-		if err := videoDownloader.DeleteVideo(fileName); err != nil {
-			h.log.WithError(err).Warn("failed to delete video")
-		} else {
-			h.log.Info("deleted video: " + fileName)
-		}
-	}(h.videoDownloader, videoPath)
+	ctx, cancel := context.WithTimeout(context.Background(), botDownloadTimeout)
+	defer cancel()
+
+	videoPath, err := h.videoDownloader.DownloadVideoTo(ctx, message.Text, dir)
 	if err != nil {
 		h.log.WithError(err).Warn("failed to download video")
 		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error(), false)
 		return err
 	}
 
-	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Transcoding video...")
-	if err != nil {
+	if err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Transcoding video..."); err != nil {
 		return err
 	}
 
-	transcodedPath, err := h.videoDownloader.TranscodeVideo(videoPath)
-	defer func(videoDownloader video_manager.VideoManager, fileName string) {
-		if fileName == "" {
-			return
-		}
-		if err := videoDownloader.DeleteVideo(fileName); err != nil {
-			h.log.WithError(err).Warn("failed to delete transcoded video")
-		} else {
-			h.log.Info("deleted transcoded video: " + fileName)
-		}
-	}(h.videoDownloader, transcodedPath)
+	transcodedPath, err := h.videoDownloader.TranscodeVideoTo(ctx, videoPath, dir)
 	if err != nil {
-		transcodeErr := err
-		h.log.WithError(transcodeErr).Warn("failed to transcode video")
-		_, _ = h.messageSender.ReplyTo(message, "failed to transcode video: "+transcodeErr.Error(), false)
-		return transcodeErr
+		h.log.WithError(err).Warn("failed to transcode video")
+		_, _ = h.messageSender.ReplyTo(message, "failed to transcode video: "+err.Error(), false)
+		return err
 	}
 
 	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Uploading video...")
