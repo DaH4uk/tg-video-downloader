@@ -50,3 +50,34 @@ func TestContentDispositionQuotesAreStripped(t *testing.T) {
 		t.Fatalf("ascii fallback must not contain quotes or backslashes: %s", fallback)
 	}
 }
+
+func TestContentDispositionRFC5987Encoding(t *testing.T) {
+	// RFC 5987 requires colon and @ to be percent-encoded
+	got := contentDisposition("Channel: @user video.mp4")
+
+	const marker = "filename*=UTF-8''"
+	encoded := got[strings.Index(got, marker)+len(marker):]
+
+	// Verify colons and @ are encoded, not literal
+	if strings.ContainsAny(encoded, ":@") {
+		t.Fatalf("filename* must percent-encode : and @, but got: %s", encoded)
+	}
+
+	// Verify the specific percent-encoded values are present
+	if !strings.Contains(encoded, "%3A") {
+		t.Fatalf("filename* must contain %%3A (encoded colon), but got: %s", encoded)
+	}
+	if !strings.Contains(encoded, "%40") {
+		t.Fatalf("filename* must contain %%40 (encoded @), but got: %s", encoded)
+	}
+
+	// Verify round-trip: url.PathUnescape can still decode it
+	decoded, err := url.PathUnescape(encoded)
+	if err != nil {
+		t.Fatalf("filename* is not valid percent-encoding: %v", err)
+	}
+	original := "Channel: @user video.mp4"
+	if decoded != original {
+		t.Fatalf("filename* decoded to %q, want %q", decoded, original)
+	}
+}
