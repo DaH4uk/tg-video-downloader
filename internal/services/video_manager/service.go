@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/lrstanley/go-ytdlp"
@@ -92,8 +93,15 @@ func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir strin
 	for _, info := range infos {
 		if info.Filename != nil {
 			metrics.DownloadTotal.WithLabelValues("success").Inc()
-			d.log.Info("Successfully downloaded video from: " + url + " to: " + *info.Filename)
-			return *info.Filename, nil
+			// Verified empirically (live yt-dlp run) that Filename comes back as an
+			// absolute path inside dir; this join is a defensive fallback in case a
+			// future extractor or go-ytdlp version ever returns a relative one.
+			name := *info.Filename
+			if !filepath.IsAbs(name) {
+				name = filepath.Join(dir, name)
+			}
+			d.log.Info("Successfully downloaded video from: " + url + " to: " + name)
+			return name, nil
 		}
 	}
 
