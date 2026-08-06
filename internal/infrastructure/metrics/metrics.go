@@ -66,4 +66,11 @@ var (
 		Name:      "transcode_total",
 		Help:      "Total number of video transcode attempts",
 	}, []string{"status"})
+
+	// APIRequests counts HTTP download API responses by status.
+	APIRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "api_requests_total",
+		Help:      "Total number of download API responses by status",
+	}, []string{"status"})
 )
