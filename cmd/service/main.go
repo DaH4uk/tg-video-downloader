@@ -93,7 +93,7 @@ func main() {
 	}
 
 	go func() {
-		log.Info("Metrics server is running on port 9900")
+		log.Info("HTTP server (metrics, download API) is running on port 9900")
 		if err := srv.ListenAndServe(); err != nil && err != netHttp.ErrServerClosed {
 			log.WithError(err).Error("metrics server error")
 		}

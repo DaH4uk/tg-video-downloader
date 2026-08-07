@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -51,7 +52,9 @@ func (h *DownloadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case h.sem <- struct{}{}:
 		defer func() { <-h.sem }()
 	default:
-		h.fail(w, http.StatusTooManyRequests, "another download is in progress")
+		// cap(h.sem) is the single source of truth for the concurrency limit, so
+		// the message can never drift from the actual configured value.
+		h.fail(w, http.StatusTooManyRequests, fmt.Sprintf("%d downloads are already running", cap(h.sem)))
 		return
 	}
 
