@@ -39,7 +39,7 @@ internal/handlers/
   bot.go                     — initializes tgbotapi.BotAPI from env
   message/
     interface.go             — Handler interface
-    http/handler.go          — handles URL messages: download → upload → cleanup
+    http/hander.go           — handles URL messages: download → upload → cleanup
   api/
     download.go              — POST /api/download: validate → download → probe → transcode → stream file
     auth.go                  — bearer token middleware
@@ -78,8 +78,10 @@ The response is `video/mp4` with a `Content-Disposition` filename. Errors come b
 |---|---|
 | 400 | malformed body, non-https URL, or a private/loopback host |
 | 401 | missing or wrong token |
+| 405 | request method is not POST |
 | 413 | video is over 500 MB or longer than 15 minutes |
 | 429 | two downloads are already running |
+| 500 | failed to create temp directory, open file, or stat video |
 | 502 | yt-dlp or ffmpeg failed |
 | 504 | the download did not finish within 5 minutes |
 
@@ -110,4 +112,4 @@ docker compose up --build
 
 ## Metrics
 
-Metrics endpoint: `:9900/metrics` (mapped from container port 9900 in docker-compose), protected by HTTP Basic Auth. The HTTP API endpoint (`POST /api/download`) runs on the same port and is enabled only when `API_TOKEN` is set.
+Metrics endpoint: `:9988/metrics` (mapped from container port 9900 in docker-compose), protected by HTTP Basic Auth. The HTTP API endpoint (`POST /api/download`) runs on the same port and is enabled only when `API_TOKEN` is set.

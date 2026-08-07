@@ -45,7 +45,7 @@ internal/handlers/
   bot.go                     — initializes tgbotapi.BotAPI from env
   message/
     interface.go             — Handler interface
-    http/handler.go          — handles URL messages: download → upload → cleanup
+    http/hander.go           — handles URL messages: download → upload → cleanup
   api/
     download.go              — POST /api/download: validate → download → probe → transcode → stream file
     auth.go                  — bearer token middleware
