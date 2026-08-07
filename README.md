@@ -1,8 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What this is
+# tg-video-downloader
 
 Telegram bot that accepts `https://` URLs and downloads/re-uploads videos via yt-dlp. No database. Stateless.
 
@@ -25,8 +21,6 @@ gofmt -w .
 # Test
 go test ./...
 ```
-
-Tests live in `internal/handlers/api` and `internal/services/video_manager`, run via `go test ./...`. Some tests in `internal/services/video_manager/probe_test.go` skip automatically when ffmpeg/ffprobe binaries are absent.
 
 ## Required environment variables
 
@@ -60,11 +54,48 @@ internal/infrastructure/
   metrics/metrics.go         — Prometheus counters/histograms (namespace: tgvd)
 ```
 
-**Request flow:** Telegram update → `message_handler` routes by prefix → `http.MessageHandler` downloads via yt-dlp → sends video file back to chat → deletes local file.
+**Request flow (Telegram):** Telegram update → `message_handler` routes by prefix → `http.MessageHandler` downloads via yt-dlp → sends video file back to chat → deletes local file.
 
 Only one message handler is registered: `"https://"` prefix → `http.MessageHandler`.
 
 **No user authorization** — the bot responds to any Telegram user.
+
+## HTTP download API
+
+`POST /api/download` downloads a video and returns the file itself. Disabled unless `API_TOKEN` is set.
+
+```bash
+curl -X POST https://<host>/api/download \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://www.tiktok.com/@user/video/123"}' \
+  -o video.mp4
+```
+
+The response is `video/mp4` with a `Content-Disposition` filename. Errors come back as `{"error": "..."}` with:
+
+| Status | Meaning |
+|---|---|
+| 400 | malformed body, non-https URL, or a private/loopback host |
+| 401 | missing or wrong token |
+| 413 | video is over 500 MB or longer than 15 minutes |
+| 429 | two downloads are already running |
+| 502 | yt-dlp or ffmpeg failed |
+| 504 | the download did not finish within 5 minutes |
+
+Videos are downloaded into a per-request temp directory and deleted once the response is sent. Transcoding to H.264/AAC happens only when the source file is not already in that format.
+
+## Apple Shortcuts
+
+1. New shortcut → **Get Contents of URL**
+   - URL: `https://<host>/api/download`
+   - Method: `POST`
+   - Headers: `Authorization` = `Bearer <your token>`
+   - Request Body: `JSON`, one field `url` (text) = **Shortcut Input**
+2. Add **Save to Photo Album**.
+3. Open shortcut settings, enable **Show in Share Sheet**, and set the accepted input type to **URLs**.
+
+Sharing a link from TikTok, Instagram or YouTube now saves the video straight to the camera roll. Long videos are rejected by design — the endpoint targets short clips.
 
 ## Deployment
 
@@ -77,4 +108,6 @@ Local Docker:
 docker compose up --build
 ```
 
-Metrics endpoint: `:9988/metrics` (mapped from container port 9900 in docker-compose), protected by HTTP Basic Auth. The HTTP API endpoint (`POST /api/download`) runs on the same port and is enabled only when `API_TOKEN` is set.
+## Metrics
+
+Metrics endpoint: `:9900/metrics` (mapped from container port 9900 in docker-compose), protected by HTTP Basic Auth. The HTTP API endpoint (`POST /api/download`) runs on the same port and is enabled only when `API_TOKEN` is set.
