@@ -83,7 +83,7 @@ func (h *DownloadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	path, err := h.manager.DownloadVideoTo(ctx, req.URL, dir)
 	if err != nil {
-		h.failDownload(w, err)
+		h.failDownload(w, ctx, err)
 		return
 	}
 
@@ -136,14 +136,24 @@ func (h *DownloadHandler) serveFile(w http.ResponseWriter, path string) {
 	metrics.APIRequests.WithLabelValues("200").Inc()
 }
 
-func (h *DownloadHandler) failDownload(w http.ResponseWriter, err error) {
+// failDownload maps a download failure to an HTTP response. The returned error
+// from exec.CommandContext does not carry context.DeadlineExceeded through its
+// error chain (os/exec reports "signal: killed", and go-ytdlp's result formatting
+// uses %s instead of %w), so timeout/cancellation must be read from ctx.Err()
+// rather than from err itself.
+func (h *DownloadHandler) failDownload(w http.ResponseWriter, ctx context.Context, err error) {
 	switch {
 	case errors.Is(err, video_manager.ErrTooLarge):
 		h.fail(w, http.StatusRequestEntityTooLarge, "video is larger than the limit")
 	case errors.Is(err, video_manager.ErrFiltered):
 		h.fail(w, http.StatusRequestEntityTooLarge, "video is longer than the limit")
-	case errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		h.fail(w, http.StatusGatewayTimeout, "download timed out")
+	case errors.Is(ctx.Err(), context.Canceled):
+		// The client (e.g. a disconnected Shortcut) hung up before the download
+		// finished. Nothing is listening for a response anymore, so don't write
+		// one or count it as a gateway error; just note it happened.
+		h.log.Info("client disconnected before download finished")
 	default:
 		h.log.WithError(err).Warn("failed to download video")
 		h.fail(w, http.StatusBadGateway, "failed to download video")

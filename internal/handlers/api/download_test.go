@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -24,12 +25,22 @@ type fakeVideoManager struct {
 	transcodeErr  error
 	transcodeBody string
 
+	// waitForDone, when set, makes DownloadVideoTo block until ctx.Done() and
+	// then return downloadErr, mimicking what exec.CommandContext actually does
+	// when its context expires: it returns a generic error (e.g. "signal:
+	// killed"), not context.DeadlineExceeded/context.Canceled.
+	waitForDone bool
+
 	gotDir       string
 	transcodeHit bool
 }
 
 func (f *fakeVideoManager) DownloadVideoTo(ctx context.Context, url, dir string) (string, error) {
 	f.gotDir = dir
+	if f.waitForDone {
+		<-ctx.Done()
+		return "", f.downloadErr
+	}
 	if f.downloadErr != nil {
 		return "", f.downloadErr
 	}
@@ -66,6 +77,14 @@ func newTestHandler(manager video_manager.VideoManager) *DownloadHandler {
 func post(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/api/download", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func postWithContext(t *testing.T, handler http.Handler, body string, ctx context.Context) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/download", strings.NewReader(body)).WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 	return rec
@@ -134,12 +153,6 @@ func TestDownloadHandlerErrorMapping(t *testing.T) {
 			wantStatus: http.StatusRequestEntityTooLarge,
 		},
 		{
-			name:       "download deadline",
-			manager:    &fakeVideoManager{downloadErr: context.DeadlineExceeded},
-			body:       `{"url":"https://example.com/v"}`,
-			wantStatus: http.StatusGatewayTimeout,
-		},
-		{
 			name:       "yt-dlp failure",
 			manager:    &fakeVideoManager{downloadErr: errors.New("boom")},
 			body:       `{"url":"https://example.com/v"}`,
@@ -194,6 +207,55 @@ func TestDownloadHandlerErrorMapping(t *testing.T) {
 				t.Fatal("error field is empty")
 			}
 		})
+	}
+}
+
+// TestDownloadHandlerContextDeadlineExceeded proves the real timeout path: it
+// does not feed the handler a sentinel error (as os/exec never actually
+// returns context.DeadlineExceeded), but instead gives it an already-expired
+// context and a fake DownloadVideoTo that blocks on ctx.Done() and then
+// returns a generic error, exactly like exec.CommandContext really behaves
+// when its context expires ("signal: killed").
+func TestDownloadHandlerContextDeadlineExceeded(t *testing.T) {
+	manager := &fakeVideoManager{waitForDone: true, downloadErr: errors.New("signal: killed")}
+
+	deadlineCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	rec := postWithContext(t, newTestHandler(manager), `{"url":"https://example.com/v"}`, deadlineCtx)
+
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusGatewayTimeout, rec.Body.String())
+	}
+
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode error body: %v", err)
+	}
+	if body.Error == "" {
+		t.Fatal("error field is empty")
+	}
+}
+
+// TestDownloadHandlerClientCanceled covers the client-hung-up case: the
+// request context is canceled (not expired), which os/exec would also
+// surface as a generic error rather than context.Canceled. The handler must
+// not write a response in this case, since nobody is listening for it.
+func TestDownloadHandlerClientCanceled(t *testing.T) {
+	manager := &fakeVideoManager{waitForDone: true, downloadErr: errors.New("signal: killed")}
+
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rec := postWithContext(t, newTestHandler(manager), `{"url":"https://example.com/v"}`, canceledCtx)
+
+	if got := rec.Header().Get("Content-Type"); got != "" {
+		t.Fatalf("Content-Type = %q, want no response written for a canceled client", got)
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("body = %q, want empty for a canceled client", rec.Body.String())
 	}
 }
 
