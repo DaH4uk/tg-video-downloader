@@ -67,30 +67,13 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		return err
 	}
 
-	if err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Transcoding video..."); err != nil {
-		return err
-	}
-
-	// Transcoding gets its own budget rather than sharing the download's context:
-	// a video that takes 9 minutes to download would otherwise leave almost no
-	// time for ffmpeg to run.
-	transcodeCtx, transcodeCancel := context.WithTimeout(context.Background(), botDownloadTimeout)
-	defer transcodeCancel()
-
-	transcodedPath, err := h.videoDownloader.TranscodeVideoTo(transcodeCtx, videoPath, dir)
-	if err != nil {
-		h.log.WithError(err).Warn("failed to transcode video")
-		_, _ = h.messageSender.ReplyTo(message, "failed to transcode video: "+err.Error(), false)
-		return err
-	}
-
 	err = h.messageSender.EditMessage(message.Chat.ID, msg.MessageID, "Uploading video...")
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	err = h.messageSender.VideoReplyTo(message, transcodedPath)
+	err = h.messageSender.VideoReplyTo(message, videoPath)
 	metrics.UploadDuration.Observe(time.Since(start).Seconds())
 	if err != nil {
 		metrics.UploadTotal.WithLabelValues("error").Inc()

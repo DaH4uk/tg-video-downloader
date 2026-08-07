@@ -1,70 +1,53 @@
 # tg-video-downloader
 
-Telegram bot that accepts `https://` URLs and downloads/re-uploads videos via yt-dlp. No database. Stateless.
+Telegram bot that accepts `https://` URLs and downloads videos via [yt-dlp](https://github.com/yt-dlp/yt-dlp), then re-uploads them directly to the chat. Stateless, no database.
 
-Videos over 500 MB or longer than 15 minutes are rejected (yt-dlp `--max-filesize` / `--match-filter`). This applies to both the Telegram bot and the HTTP API below — it's a deliberate guard, not a bug. If the bot replies "failed to download video: video does not pass the duration filter" or "... is larger than the allowed size", that's why.
+It also exposes an HTTP endpoint that returns the downloaded file, so an Apple Shortcut can save videos straight to the camera roll.
 
-## Commands
+## How it works
 
-```bash
-# Build
-go build ./...
+Send the bot any `https://` URL — it will download the video and send it back as a Telegram file. After sending, the local file is deleted.
 
-# Run locally (requires .env)
-go run ./cmd/service/main.go
+Supported sources: anything yt-dlp supports (YouTube, Twitter/X, Instagram, TikTok, Vimeo, etc.).
 
-# Lint (must pass before merge)
-gofmt -l .
-golangci-lint run
+Videos larger than 500 MB or longer than 15 minutes are rejected — both the bot and the HTTP API share these limits.
 
-# Format
-gofmt -w .
+## Requirements
 
-# Test
-go test ./...
-```
+- Go 1.26+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (installed automatically on first run via go-ytdlp)
+- `ffmpeg` and `ffprobe` — used by the HTTP API to convert videos Apple Photos would otherwise reject. The service refuses to start without them.
 
-## Required environment variables
+## Environment variables
 
 | Variable | Description |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `METRICS_USERNAME` | Basic auth username for `/metrics` |
-| `METRICS_PASSWORD` | Basic auth password for `/metrics` |
+| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) |
+| `METRICS_USERNAME` | Basic auth username for `/metrics` endpoint |
+| `METRICS_PASSWORD` | Basic auth password for `/metrics` endpoint |
 | `API_TOKEN` | Bearer token for `POST /api/download`; the endpoint is disabled when unset |
 
-## Architecture
+## Running locally
 
-```
-cmd/service/main.go          — wiring: init bot, ytdlp, handlers; runs HTTP server
-internal/handlers/
-  bot.go                     — initializes tgbotapi.BotAPI from env
-  message/
-    interface.go             — Handler interface
-    http/hander.go           — handles URL messages: download → upload → cleanup
-  api/
-    download.go              — POST /api/download: validate → download → probe → transcode → stream file
-    auth.go                  — bearer token middleware
-    url.go                   — URL validation (https only, no private hosts)
-    disposition.go           — RFC 5987 Content-Disposition
-internal/services/
-  message_handler/handler.go — routes incoming updates to registered handlers by message prefix
-  messages_sender/service.go — thin wrapper around tgbotapi send/edit/delete
-  video_manager/service.go   — wraps go-ytdlp: install, download, delete, probe, transcode
-internal/infrastructure/
-  logger/                    — logrus-based logger with interface
-  metrics/metrics.go         — Prometheus counters/histograms (namespace: tgvd)
+```bash
+# Copy and fill in the env file
+cp .env.example .env
+
+# Run
+go run ./cmd/service/main.go
 ```
 
-**Request flow (Telegram):** Telegram update → `message_handler` routes by prefix → `http.MessageHandler` downloads via yt-dlp → sends video file back to chat → deletes local file.
+## Running with Docker
 
-Only one message handler is registered: `"https://"` prefix → `http.MessageHandler`.
+```bash
+docker compose up --build
+```
 
-**No user authorization** — the bot responds to any Telegram user.
+Requires a `.env` file with the variables above.
 
 ## HTTP download API
 
-`POST /api/download` downloads a video and returns the file itself. Disabled unless `API_TOKEN` is set.
+`POST /api/download` downloads a video and returns the file itself. Disabled unless `API_TOKEN` is set — the bot keeps working either way.
 
 ```bash
 curl -X POST https://<host>/api/download \
@@ -74,7 +57,7 @@ curl -X POST https://<host>/api/download \
   -o video.mp4
 ```
 
-The response is `video/mp4` with a `Content-Disposition` filename. Errors come back as `{"error": "..."}` with:
+The response is `video/mp4` with a `Content-Disposition` filename. Errors come back as `{"error": "..."}`:
 
 | Status | Meaning |
 |---|---|
@@ -87,7 +70,7 @@ The response is `video/mp4` with a `Content-Disposition` filename. Errors come b
 | 502 | yt-dlp or ffmpeg failed |
 | 504 | the download did not finish within 5 minutes |
 
-Videos are downloaded into a per-request temp directory and deleted once the response is sent. Transcoding to H.264/AAC happens only when the source file is not already in that format.
+Each request downloads into its own temp directory, which is removed once the response is sent. Unlike the bot path, the API converts the file to H.264/AAC when it is not already in that format — Apple Photos rejects anything else. Files that already qualify (most TikTok, Reels and Shorts) skip ffmpeg entirely.
 
 ## Apple Shortcuts
 
@@ -97,21 +80,19 @@ Videos are downloaded into a per-request temp directory and deleted once the res
    - Headers: `Authorization` = `Bearer <your token>`
    - Request Body: `JSON`, one field `url` (text) = **Shortcut Input**
 2. Add **Save to Photo Album**.
-3. Open shortcut settings, enable **Show in Share Sheet**, and set the accepted input type to **URLs**.
+3. In the shortcut settings, enable **Show in Share Sheet** and set the accepted input type to **URLs**.
 
 Sharing a link from TikTok, Instagram or YouTube now saves the video straight to the camera roll. Long videos are rejected by design — the endpoint targets short clips.
 
-## Deployment
-
-CI (`.github/workflows/main.yml`) on push to `main`:
-1. Lint → build Docker image → push to `ghcr.io/dah4uk/tg-video-downloader:v0.0.<run_number>`
-2. SCP `docker-compose.deploy.yml` to server, SSH deploy via `docker compose pull && up -d`
-
-Local Docker:
-```bash
-docker compose up --build
-```
-
 ## Metrics
 
-Metrics endpoint: `:9988/metrics` (mapped from container port 9900 in docker-compose), protected by HTTP Basic Auth. The HTTP API endpoint (`POST /api/download`) runs on the same port and is enabled only when `API_TOKEN` is set.
+Prometheus metrics are available at `:9988/metrics` (container port `9900`), protected by HTTP Basic Auth. The download API runs on the same port.
+
+## Deployment
+
+On every push to `main`, CI:
+1. Lints, builds and tests, then builds a Docker image
+2. Pushes to `ghcr.io/dah4uk/tg-video-downloader:v0.0.<run_number>`
+3. Deploys to the server via SSH (`docker compose pull && up -d`)
+
+The deploy step writes `API_TOKEN` from the repository secret of the same name; without that secret the endpoint stays disabled.

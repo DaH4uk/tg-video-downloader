@@ -66,6 +66,8 @@ internal/infrastructure/
 
 Only one message handler is registered: `"https://"` prefix → `http.MessageHandler`.
 
+**API flow:** `POST /api/download` → bearer auth → URL validation → per-request temp dir → yt-dlp → ffprobe → ffmpeg only when the file is not already mp4/H.264/AAC → file streamed in the response body → temp dir removed. Transcoding lives on this path only: Apple Photos rejects anything but H.264/AAC, while Telegram accepts what yt-dlp produces, so the bot sends the file as-is.
+
 **No user authorization** — the bot responds to any Telegram user.
 
 ## Deployment
