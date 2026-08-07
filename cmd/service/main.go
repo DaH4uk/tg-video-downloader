@@ -15,12 +15,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"tg-video-downloader/internal/handlers"
+	"tg-video-downloader/internal/handlers/api"
 	"tg-video-downloader/internal/handlers/message/http"
 	"tg-video-downloader/internal/infrastructure/logger"
 	"tg-video-downloader/internal/services/message_handler"
 	"tg-video-downloader/internal/services/messages_sender"
 	"tg-video-downloader/internal/services/video_manager"
 )
+
+const apiMaxConcurrent = 2
 
 func metricsBasicAuth(username, password string, next netHttp.Handler) netHttp.Handler {
 	return netHttp.HandlerFunc(func(w netHttp.ResponseWriter, r *netHttp.Request) {
@@ -49,6 +52,8 @@ func main() {
 		log.Fatal("METRICS_USERNAME and METRICS_PASSWORD environment variables must be set")
 	}
 
+	apiToken := os.Getenv("API_TOKEN")
+
 	telegramBotApi, err := handlers.InitBotApi()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "failed to init telegram bot api"))
@@ -72,10 +77,23 @@ func main() {
 
 	mux := netHttp.NewServeMux()
 	mux.Handle("/metrics", metricsBasicAuth(metricsUsername, metricsPassword, promhttp.Handler()))
-	srv := &netHttp.Server{Addr: ":9900", Handler: mux}
+
+	if apiToken == "" {
+		log.Warn("API_TOKEN is not set, POST /api/download is disabled")
+	} else {
+		downloadHandler := api.NewDownloadHandler(log, videoDownloader, apiMaxConcurrent)
+		mux.Handle("/api/download", api.BearerAuth(apiToken, downloadHandler))
+		log.Info("Download API is enabled on POST /api/download")
+	}
+
+	srv := &netHttp.Server{
+		Addr:              ":9900",
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 
 	go func() {
-		log.Info("Metrics server is running on port 9900")
+		log.Info("HTTP server (metrics, download API) is running on port 9900")
 		if err := srv.ListenAndServe(); err != nil && err != netHttp.ErrServerClosed {
 			log.WithError(err).Error("metrics server error")
 		}
