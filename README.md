@@ -2,6 +2,8 @@
 
 Telegram bot that accepts `https://` URLs and downloads/re-uploads videos via yt-dlp. No database. Stateless.
 
+Videos over 500 MB or longer than 15 minutes are rejected (yt-dlp `--max-filesize` / `--match-filter`). This applies to both the Telegram bot and the HTTP API below — it's a deliberate guard, not a bug. If the bot replies "failed to download video: video does not pass the duration filter" or "... is larger than the allowed size", that's why.
+
 ## Commands
 
 ```bash

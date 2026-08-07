@@ -57,10 +57,10 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), botDownloadTimeout)
-	defer cancel()
+	downloadCtx, downloadCancel := context.WithTimeout(context.Background(), botDownloadTimeout)
+	defer downloadCancel()
 
-	videoPath, err := h.videoDownloader.DownloadVideoTo(ctx, message.Text, dir)
+	videoPath, err := h.videoDownloader.DownloadVideoTo(downloadCtx, message.Text, dir)
 	if err != nil {
 		h.log.WithError(err).Warn("failed to download video")
 		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error(), false)
@@ -71,7 +71,13 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 		return err
 	}
 
-	transcodedPath, err := h.videoDownloader.TranscodeVideoTo(ctx, videoPath, dir)
+	// Transcoding gets its own budget rather than sharing the download's context:
+	// a video that takes 9 minutes to download would otherwise leave almost no
+	// time for ffmpeg to run.
+	transcodeCtx, transcodeCancel := context.WithTimeout(context.Background(), botDownloadTimeout)
+	defer transcodeCancel()
+
+	transcodedPath, err := h.videoDownloader.TranscodeVideoTo(transcodeCtx, videoPath, dir)
 	if err != nil {
 		h.log.WithError(err).Warn("failed to transcode video")
 		_, _ = h.messageSender.ReplyTo(message, "failed to transcode video: "+err.Error(), false)
