@@ -8,5 +8,6 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?err}
       METRICS_USERNAME: ${METRICS_USERNAME:?err}
       METRICS_PASSWORD: ${METRICS_PASSWORD:?err}
+      API_TOKEN: ${API_TOKEN:-}
     ports:
       - "9988:9900"

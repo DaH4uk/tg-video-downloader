@@ -33,6 +33,12 @@ jobs:
             exit 1
           fi
 
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -107,6 +113,7 @@ jobs:
             echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
             echo "METRICS_USERNAME=${{ vars.METRICS_USERNAME }}" >> .env
             echo "METRICS_PASSWORD=${{ secrets.METRICS_PASSWORD }}" >> .env
+            echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u "${{ github.repository_owner }}" \
