@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/pkg/errors"
 
 	"tg-video-downloader/internal/infrastructure/logger/interfaces"
 	"tg-video-downloader/internal/infrastructure/metrics"
@@ -63,7 +64,7 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	videoPath, err := h.videoDownloader.DownloadVideoTo(downloadCtx, message.Text, dir)
 	if err != nil {
 		h.log.WithError(err).Warn("failed to download video")
-		_, err = h.messageSender.ReplyTo(message, "failed to download video: "+err.Error(), false)
+		_, err = h.messageSender.ReplyTo(message, downloadErrorReply(err), false)
 		return err
 	}
 
@@ -81,4 +82,12 @@ func (h MessageHandler) HandleMessage(message *tgbotapi.Message) error {
 	}
 	metrics.UploadTotal.WithLabelValues("success").Inc()
 	return nil
+}
+
+func downloadErrorReply(err error) string {
+	if errors.Is(err, video_manager.ErrTikTokIPBlocked) {
+		return "TikTok temporarily blocks this bot from accessing this video. Please try again later."
+	}
+
+	return "failed to download video: " + err.Error()
 }

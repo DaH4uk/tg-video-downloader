@@ -146,6 +146,8 @@ func (h *DownloadHandler) serveFile(w http.ResponseWriter, path string) {
 // rather than from err itself.
 func (h *DownloadHandler) failDownload(w http.ResponseWriter, ctx context.Context, err error) {
 	switch {
+	case errors.Is(err, video_manager.ErrTikTokIPBlocked):
+		h.fail(w, http.StatusServiceUnavailable, "TikTok temporarily blocks the downloader from accessing this video")
 	case errors.Is(err, video_manager.ErrTooLarge):
 		h.fail(w, http.StatusRequestEntityTooLarge, "video is larger than the limit")
 	case errors.Is(err, video_manager.ErrFiltered):
