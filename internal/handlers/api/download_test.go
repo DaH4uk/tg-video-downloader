@@ -141,6 +141,12 @@ func TestDownloadHandlerErrorMapping(t *testing.T) {
 		wantStatus int
 	}{
 		{
+			name:       "TikTok blocks downloader IP",
+			manager:    &fakeVideoManager{downloadErr: video_manager.ErrTikTokIPBlocked},
+			body:       `{"url":"https://www.tiktok.com/@user/video/123"}`,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
 			name:       "video too large",
 			manager:    &fakeVideoManager{downloadErr: video_manager.ErrTooLarge},
 			body:       `{"url":"https://example.com/v"}`,

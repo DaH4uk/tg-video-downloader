@@ -13,6 +13,11 @@ func TestClassifyRejection(t *testing.T) {
 		want   error
 	}{
 		{
+			name:   "TikTok IP blocked",
+			output: "ERROR: [TikTok] 123: Your IP address is blocked from accessing this post",
+			want:   ErrTikTokIPBlocked,
+		},
+		{
 			name:   "max filesize",
 			output: "[download] File is larger than max-filesize (91234567 bytes > 524288000 bytes). Aborting download",
 			want:   ErrTooLarge,

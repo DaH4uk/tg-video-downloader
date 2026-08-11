@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/lrstanley/go-ytdlp"
@@ -20,6 +21,16 @@ const (
 	outputTemplate = "%(extractor)s - %(title).100B.%(ext)s"
 	installTimeout = 5 * time.Minute
 )
+
+var videoExtensions = map[string]struct{}{
+	".3gp":  {},
+	".avi":  {},
+	".m4v":  {},
+	".mkv":  {},
+	".mov":  {},
+	".mp4":  {},
+	".webm": {},
+}
 
 type VideoManager interface {
 	DownloadVideoTo(ctx context.Context, url, dir string) (string, error)
@@ -92,7 +103,6 @@ func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir strin
 
 	for _, info := range infos {
 		if info.Filename != nil {
-			metrics.DownloadTotal.WithLabelValues("success").Inc()
 			// Verified empirically (live yt-dlp run) that Filename comes back as an
 			// absolute path inside dir; this join is a defensive fallback in case a
 			// future extractor or go-ytdlp version ever returns a relative one.
@@ -100,16 +110,55 @@ func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir strin
 			if !filepath.IsAbs(name) {
 				name = filepath.Join(dir, name)
 			}
-			d.log.Info("Successfully downloaded video from: " + url + " to: " + name)
-			return name, nil
+			if isRegularFile(name) {
+				metrics.DownloadTotal.WithLabelValues("success").Inc()
+				d.log.Info("Successfully downloaded video from: " + url + " to: " + name)
+				return name, nil
+			}
 		}
+	}
+
+	// Some extractors omit _filename from --print-json even though the download
+	// completed. The caller supplies a fresh directory for each request, so a
+	// video file there is an unambiguous fallback.
+	if name, ok := findDownloadedVideo(dir); ok {
+		metrics.DownloadTotal.WithLabelValues("success").Inc()
+		d.log.Info("Successfully found downloaded video from: " + url + " at: " + name)
+		return name, nil
 	}
 
 	metrics.DownloadTotal.WithLabelValues("error").Inc()
 	if rejected := classifyRejection(result.Stdout + "\n" + result.Stderr); rejected != nil {
 		return "", rejected
 	}
+	d.log.WithFields(map[string]interface{}{
+		"ytdlp_stdout": result.Stdout,
+		"ytdlp_stderr": result.Stderr,
+	}).Warn("yt-dlp completed without a downloadable video file")
 	return "", errors.New("failed to get video filename")
+}
+
+func findDownloadedVideo(dir string) (string, bool) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", false
+	}
+
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+		if _, ok := videoExtensions[strings.ToLower(filepath.Ext(entry.Name()))]; ok {
+			return filepath.Join(dir, entry.Name()), true
+		}
+	}
+
+	return "", false
+}
+
+func isRegularFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
 }
 
 // NeedsTranscode reports whether the file must be re-encoded before it can be
