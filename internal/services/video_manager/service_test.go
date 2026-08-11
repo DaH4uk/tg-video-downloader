@@ -1,10 +1,19 @@
 package video_manager
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
+
+func TestNewDownloadCommandDisablesSimulation(t *testing.T) {
+	cmd := newDownloadCommand(t.TempDir()).BuildCommand(context.Background(), "https://example.com/video")
+	if !slices.Contains(cmd.Args, "--no-simulate") {
+		t.Fatalf("yt-dlp arguments %q do not include --no-simulate", cmd.Args)
+	}
+}
 
 func TestFindDownloadedVideo(t *testing.T) {
 	dir := t.TempDir()
