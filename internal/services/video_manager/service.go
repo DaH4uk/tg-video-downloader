@@ -69,16 +69,7 @@ func New(log interfaces.Logger) (VideoManager, error) {
 func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir string) (string, error) {
 	d.log.Info("Downloading video from: " + url)
 
-	dl := ytdlp.New().
-		PrintJSON().
-		NoProgress().
-		FormatSort("res,ext:mp4:m4a").
-		NoPlaylist().
-		NoOverwrites().
-		MaxFileSize(maxFileSize).
-		MatchFilters(durationFilter).
-		Paths(dir).
-		Output(outputTemplate)
+	dl := newDownloadCommand(dir)
 
 	start := time.Now()
 	result, err := dl.Run(ctx, url)
@@ -136,6 +127,22 @@ func (d DefaultVideoManager) DownloadVideoTo(ctx context.Context, url, dir strin
 		"ytdlp_stderr": result.Stderr,
 	}).Warn("yt-dlp completed without a downloadable video file")
 	return "", errors.New("failed to get video filename")
+}
+
+func newDownloadCommand(dir string) *ytdlp.Command {
+	return ytdlp.New().
+		PrintJSON().
+		// --print-json simulates by default. Keep JSON output for extracting the
+		// final filename, but explicitly request the actual download.
+		NoSimulate().
+		NoProgress().
+		FormatSort("res,ext:mp4:m4a").
+		NoPlaylist().
+		NoOverwrites().
+		MaxFileSize(maxFileSize).
+		MatchFilters(durationFilter).
+		Paths(dir).
+		Output(outputTemplate)
 }
 
 func findDownloadedVideo(dir string) (string, bool) {
