@@ -44,11 +44,11 @@ func New() interfaces.Logger {
 	}
 
 	log.SetReportCaller(false)
-	log.SetFormatter(&nested.Formatter{
+	log.SetFormatter(redactingFormatter{next: &nested.Formatter{
 		TimestampFormat: "2006-01-02 15:04:05",
 		HideKeys:        false,
 		FieldsOrder:     []string{"component", "category"},
-	})
+	}})
 
 	result := &Logger{logger: log}
 
