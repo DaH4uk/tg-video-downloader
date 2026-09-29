@@ -76,6 +76,15 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
+      # SSH on the hosts is reachable only from the tailnet, so the runner
+      # joins it as an ephemeral tag:ci node for the deploy steps.
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
       - name: Upload deploy compose
         uses: appleboy/scp-action@v0.1.7
         with:
