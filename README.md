@@ -14,7 +14,7 @@ Videos larger than 500 MB or longer than 15 minutes are rejected — both the bo
 
 ## Requirements
 
-- Go 1.26+
+- Go 1.27+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (installed automatically on first run via go-ytdlp)
 - `ffmpeg` and `ffprobe` — used by the HTTP API to convert videos Apple Photos would otherwise reject. The service refuses to start without them.
 

@@ -74,7 +74,7 @@ Only one message handler is registered: `"https://"` prefix → `http.MessageHan
 
 CI (`.github/workflows/main.yml`) on push to `main`:
 1. Lint → build Docker image → push to `ghcr.io/dah4uk/tg-video-downloader:v0.0.<run_number>`
-2. SCP `docker-compose.deploy.yml` to server, SSH deploy via `docker compose pull && up -d`
+2. Join the tailnet as an ephemeral `tag:ci` node (`TS_OAUTH_CLIENT_ID`/`TS_OAUTH_SECRET`), SCP `docker-compose.deploy.yml` to `tw-ams-01` (`vars.SSH_HOST` = its Tailscale IP; SSH there is tailnet-only), SSH deploy via `docker compose pull && up -d`
 
 Local Docker:
 ```bash
