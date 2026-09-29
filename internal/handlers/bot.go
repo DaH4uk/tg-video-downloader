@@ -20,6 +20,10 @@ func InitBotApi() (*tgbotapi.BotAPI, error) {
 		return nil, errors.New("TELEGRAM_BOT_TOKEN environment variable not set")
 	}
 
+	if err := tgbotapi.SetLogger(botLogger{log: log}); err != nil {
+		return nil, errors.Wrap(err, "failed to set telegram bot logger")
+	}
+
 	httpClient := &http.Client{
 		Timeout: 2 * time.Minute,
 		Transport: &http.Transport{
