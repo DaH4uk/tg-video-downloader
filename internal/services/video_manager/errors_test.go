@@ -28,6 +28,11 @@ func TestClassifyRejection(t *testing.T) {
 			want:   ErrFiltered,
 		},
 		{
+			name:   "live stream",
+			output: `[download] Al Jazeera English | Live 2026-10-09 17:33 does not pass filter (duration <? 900 & !is_live), skipping ..`,
+			want:   ErrFiltered,
+		},
+		{
 			name:   "unrelated failure",
 			output: "ERROR: [youtube] abc: Video unavailable",
 			want:   nil,

@@ -16,8 +16,12 @@ import (
 )
 
 const (
-	maxFileSize    = "500M"
-	durationFilter = "duration < 900"
+	maxFileSize = "500M"
+	// "<?" lets videos with unknown duration through: some extractors (e.g.
+	// Instagram reels) don't report it, and plain "<" rejects a missing field.
+	// --max-filesize still bounds such downloads. Live streams often report no
+	// duration either and never end, so they are rejected explicitly.
+	durationFilter = "duration <? 900 & !is_live"
 	outputTemplate = "%(extractor)s - %(title).100B.%(ext)s"
 	installTimeout = 5 * time.Minute
 )
