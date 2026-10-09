@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Telegram bot that accepts `https://` URLs and downloads/re-uploads videos via yt-dlp. No database. Stateless.
 
-Videos over 500 MB or longer than 15 minutes are rejected (yt-dlp `--max-filesize` / `--match-filter`, set in `internal/services/video_manager/service.go`). This applies to both the Telegram bot and the HTTP API — it's a deliberate guard, not a bug.
+Videos over 500 MB or longer than 15 minutes are rejected (yt-dlp `--max-filesize` / `--match-filter`, set in `internal/services/video_manager/service.go`). The duration filter uses `<?` so videos whose extractor reports no duration (e.g. Instagram reels) still pass; only the size limit applies to them. This applies to both the Telegram bot and the HTTP API — it's a deliberate guard, not a bug.
 
 ## Commands
 
